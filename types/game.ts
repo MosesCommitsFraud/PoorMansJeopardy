@@ -32,6 +32,7 @@ export interface GameState {
   buzzerActive: boolean;
   buzzerQueue: BuzzerEvent[];
   gameStarted: boolean;
+  showAnswerToPlayers?: boolean;
 }
 
 export interface Lobby {

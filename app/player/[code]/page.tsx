@@ -25,7 +25,6 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const [playerId, setPlayerId] = useState<string>("");
   const [playerName, setPlayerName] = useState<string>("");
   const [hasBuzzed, setHasBuzzed] = useState(false);
-  const [buzzerPosition, setBuzzerPosition] = useState<number | null>(null);
   const [currentVersion, setCurrentVersion] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
@@ -84,12 +83,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   };
 
   const checkBuzzerStatus = (state: GameState) => {
-    const position = state.buzzerQueue?.findIndex((b: any) => b.playerId === playerId);
-    if (position !== -1 && position !== undefined) {
-      setBuzzerPosition(position + 1);
+    const isInQueue = state.buzzerQueue?.some((b: any) => b.playerId === playerId);
+    if (isInQueue) {
       setHasBuzzed(true);
     } else {
-      setBuzzerPosition(null);
       setHasBuzzed(false);
     }
   };
@@ -118,14 +115,12 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
           body: JSON.stringify({ playerId, playerName }),
         });
         
-        const data = await response.json();
-        
         if (response.ok) {
           setHasBuzzed(true);
-          setBuzzerPosition(data.position);
           // Force immediate update
           loadGameState();
         } else {
+          const data = await response.json();
           console.error("Buzz error:", data.error);
         }
       } catch (error) {
@@ -217,10 +212,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                   {gameState?.buzzerActive ? "🔔 BUZZER ACTIVE" : "🔕 BUZZER INACTIVE"}
                 </div>
                 
-                {buzzerPosition !== null && (
+                {hasBuzzed && (
                   <div className="px-4 py-2 bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 rounded-full">
                     <span className="text-sm font-bold text-yellow-400">
-                      You are #{buzzerPosition} in queue!
+                      ✓ You buzzed in!
                     </span>
                   </div>
                 )}
@@ -383,9 +378,22 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
             <div className="text-5xl md:text-6xl font-bold leading-tight px-8">
               {gameState?.currentQuestion?.question}
             </div>
-            <div className="mt-12 text-xl text-gray-400">
-              Read the question carefully and be ready to answer!
-            </div>
+            
+            {/* Show Answer if host enabled it */}
+            {gameState?.showAnswerToPlayers && (
+              <div className="mt-12 pt-8 border-t-4 border-green-400/50">
+                <div className="text-2xl font-bold text-green-400 mb-4">ANSWER:</div>
+                <div className="text-4xl md:text-5xl font-bold text-green-300">
+                  {gameState?.currentQuestion?.answer}
+                </div>
+              </div>
+            )}
+            
+            {!gameState?.showAnswerToPlayers && (
+              <div className="mt-12 text-xl text-gray-400">
+                Read the question carefully and be ready to answer!
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

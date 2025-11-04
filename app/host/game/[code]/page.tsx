@@ -122,13 +122,20 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     }
   };
 
+  const toggleAnswerToPlayers = async () => {
+    await updateGameState({ 
+      showAnswerToPlayers: !gameState?.showAnswerToPlayers
+    });
+  };
+
   const dismissQuestion = async () => {
     // Close without marking as answered
     if (selectedQuestion && gameState) {
       await updateGameState({
         currentQuestion: null,
         buzzerActive: false,
-        buzzerQueue: []
+        buzzerQueue: [],
+        showAnswerToPlayers: false
       });
       
       setSelectedQuestion(null);
@@ -150,12 +157,29 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         categories: updatedCategories,
         currentQuestion: null,
         buzzerActive: false,
-        buzzerQueue: []
+        buzzerQueue: [],
+        showAnswerToPlayers: false
       });
       
       setSelectedQuestion(null);
       setShowAnswer(false);
     }
+  };
+
+  const reopenQuestion = async (categoryId: string, questionId: string) => {
+    if (!gameState) return;
+    
+    // Mark question as not answered
+    const updatedCategories = gameState.categories.map(cat => ({
+      ...cat,
+      questions: cat.questions.map(q => 
+        q.id === questionId ? { ...q, answered: false } : q
+      )
+    }));
+    
+    await updateGameState({
+      categories: updatedCategories
+    });
   };
 
   const activateBuzzer = () => {
@@ -325,18 +349,31 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               {gameState.categories.map((category) => {
                 const question = category.questions[rowIndex];
                 return (
-                  <button
-                    key={question.id}
-                    onClick={() => selectQuestion(category.id, question.id)}
-                    disabled={question.answered}
-                    className={`p-8 text-3xl font-bold rounded-lg transition-all backdrop-blur-sm ${
-                      question.answered
-                        ? "bg-gray-800/30 border border-gray-600/20 text-gray-600 cursor-not-allowed"
-                        : "bg-blue-600/40 border border-blue-400/30 text-yellow-400 hover:bg-blue-500/50 hover:border-blue-300/40 cursor-pointer"
-                    }`}
-                  >
-                    {question.answered ? "" : `$${question.value}`}
-                  </button>
+                  <div key={question.id} className="relative">
+                    <button
+                      onClick={() => selectQuestion(category.id, question.id)}
+                      disabled={question.answered}
+                      className={`w-full p-8 text-3xl font-bold rounded-lg transition-all backdrop-blur-sm ${
+                        question.answered
+                          ? "bg-gray-800/30 border border-gray-600/20 text-gray-600 cursor-not-allowed"
+                          : "bg-blue-600/40 border border-blue-400/30 text-yellow-400 hover:bg-blue-500/50 hover:border-blue-300/40 cursor-pointer"
+                      }`}
+                    >
+                      {question.answered ? "" : `$${question.value}`}
+                    </button>
+                    
+                    {/* Reopen button for answered questions */}
+                    {question.answered && (
+                      <button
+                        onClick={() => reopenQuestion(category.id, question.id)}
+                        className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-blue-600/80 backdrop-blur-sm rounded-lg"
+                      >
+                        <span className="text-sm font-semibold text-white">
+                          ↩️ Reopen
+                        </span>
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>
@@ -369,13 +406,26 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   {gameState?.currentQuestion?.id === selectedQuestion?.id ? "✓ Shown to Players" : "📺 Show to Players"}
                 </Button>
                 <Button onClick={() => setShowAnswer(!showAnswer)} variant="outline" className="flex-1">
-                  {showAnswer ? "Hide Answer" : "Show Answer"}
+                  {showAnswer ? "Hide Answer (Host)" : "Show Answer (Host)"}
                 </Button>
               </div>
               <div className="flex gap-2">
-                <Button onClick={dismissQuestion} variant="outline" className="flex-1">
-                  Close (Keep Open)
+                <Button 
+                  onClick={toggleAnswerToPlayers}
+                  variant={gameState?.showAnswerToPlayers ? "secondary" : "outline"}
+                  className="flex-1"
+                >
+                  {gameState?.showAnswerToPlayers ? "✓ Answer Shown to Players" : "📺 Show Answer to Players"}
                 </Button>
+                <Button 
+                  onClick={gameState?.buzzerActive ? deactivateBuzzer : activateBuzzer} 
+                  variant={gameState?.buzzerActive ? "secondary" : "default"}
+                  className="flex-1"
+                >
+                  {gameState?.buzzerActive ? <><BellOff className="mr-2 h-4 w-4" />Deactivate Buzzer</> : <><Bell className="mr-2 h-4 w-4" />Activate Buzzer</>}
+                </Button>
+              </div>
+              <div className="flex gap-2">
                 <Button onClick={closeQuestion} variant="destructive" className="flex-1">
                   Close & Mark Answered
                 </Button>
