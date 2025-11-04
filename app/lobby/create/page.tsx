@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@heroui/spinner";
 import { Crown, Lock, ArrowLeft, Sparkles } from "lucide-react";
 
 export default function CreateLobby() {
@@ -133,10 +134,10 @@ export default function CreateLobby() {
                 disabled={isCreating || (usePassword && !password)}
               >
                 {isCreating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    Creating Lobby...
-                  </>
+                  <div className="flex items-center gap-2">
+                    <Spinner color="default" size="sm" />
+                    <span>Creating Lobby...</span>
+                  </div>
                 ) : (
                   <>
                     <Crown className="w-5 h-5 mr-2" />

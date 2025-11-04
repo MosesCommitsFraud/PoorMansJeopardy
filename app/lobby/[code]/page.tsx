@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle, AlertCircle } from "lucide-react";
+import { Spinner } from "@heroui/spinner";
 import { 
   AlertDialog, 
   AlertDialogAction,
@@ -219,8 +220,8 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     return (
       <main className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card>
-          <CardContent className="p-8">
-            <p className="text-lg">Loading lobby...</p>
+          <CardContent className="p-8 flex flex-col items-center gap-4">
+            <Spinner color="primary" label="Loading lobby..." labelColor="foreground" />
           </CardContent>
         </Card>
       </main>

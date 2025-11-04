@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@heroui/spinner";
 import { Users, Lock, ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function JoinLobby() {
@@ -185,10 +186,10 @@ export default function JoinLobby() {
                 disabled={isJoining || !code || !playerName || (showPassword && !password)}
               >
                 {isJoining ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    Joining Lobby...
-                  </>
+                  <div className="flex items-center gap-2">
+                    <Spinner color="default" size="sm" />
+                    <span>Joining Lobby...</span>
+                  </div>
                 ) : (
                   <>
                     <Users className="w-5 h-5 mr-2" />
