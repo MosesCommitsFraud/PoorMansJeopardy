@@ -28,6 +28,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [lastBuzzerCount, setLastBuzzerCount] = useState(0);
 
   useEffect(() => {
     loadGameState();
@@ -63,6 +64,31 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       }
     }
   };
+
+  // Play buzzer sound when someone buzzes in
+  const playBuzzerSound = () => {
+    try {
+      const audio = new Audio('/buzzer.mp3');
+      audio.volume = 0.5; // 50% volume
+      audio.play().catch(error => {
+        console.log("Audio playback failed:", error);
+      });
+    } catch (error) {
+      console.log("Audio not available:", error);
+    }
+  };
+
+  // Detect when a new player buzzes in
+  useEffect(() => {
+    const currentBuzzerCount = gameState?.buzzerQueue?.length || 0;
+    
+    if (currentBuzzerCount > lastBuzzerCount && lastBuzzerCount > 0) {
+      // Someone just buzzed in! Play sound
+      playBuzzerSound();
+    }
+    
+    setLastBuzzerCount(currentBuzzerCount);
+  }, [gameState?.buzzerQueue?.length]);
 
   const updateGameState = async (updates: Partial<GameState>) => {
     if (!gameState) return;
@@ -121,7 +147,6 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
   const clearBuzzer = () => {
     updateGameState({ buzzerQueue: [] });
-    setBuzzerQueue([]);
   };
 
   const updatePlayerScore = async (playerId: string, points: number) => {

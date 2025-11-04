@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Trophy, Users, LogOut, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Bell, Trophy, Users, LogOut, AlertCircle, Keyboard } from "lucide-react";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +20,7 @@ import { GameState } from "@/types/game";
 
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
+  const router = useRouter();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerId, setPlayerId] = useState<string>("");
   const [playerName, setPlayerName] = useState<string>("");
@@ -91,8 +94,23 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     }
   };
 
+  const playBuzzerSound = () => {
+    try {
+      const audio = new Audio('/buzzer.mp3');
+      audio.volume = 0.5; // 50% volume
+      audio.play().catch(error => {
+        console.log("Audio playback failed (may need user interaction):", error);
+      });
+    } catch (error) {
+      console.log("Audio not available:", error);
+    }
+  };
+
   const buzz = async () => {
     if (gameState?.buzzerActive && !hasBuzzed) {
+      // Play buzzer sound immediately for instant feedback
+      playBuzzerSound();
+      
       try {
         const response = await fetch(`/api/lobby/${resolvedParams.code}/buzz`, {
           method: "POST",
@@ -211,27 +229,6 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
           </Card>
         </div>
 
-        {/* Current Question Display */}
-        {gameState?.currentQuestion && (
-          <div className="mb-8">
-            <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-center">Current Question</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 p-8 rounded-lg text-center">
-                  <div className="text-sm font-semibold text-blue-300 mb-4">
-                    ${gameState.currentQuestion.value}
-                  </div>
-                  <div className="text-2xl font-bold">
-                    {gameState.currentQuestion.question}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
         {/* Buzzer */}
         <div className="mb-8">
           <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
@@ -275,13 +272,66 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                   )}
                 </button>
                 
-                <div className="mt-4 text-sm text-gray-400">
-                  Press SPACEBAR or click button to buzz in
+                {/* Enhanced Spacebar Hint */}
+                <div className="mt-6 flex items-center justify-center gap-3">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
+                    <Keyboard className="h-5 w-5 text-blue-400" />
+                    <span className="text-sm font-semibold">Press SPACEBAR to buzz</span>
+                  </div>
+                </div>
+                
+                {/* Tab Focus Reminder */}
+                <div className="mt-3 text-xs text-gray-500 bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded px-3 py-2 inline-block">
+                  💡 Make sure this window is focused for spacebar to work
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Game Board (Read-only) */}
+        {gameState?.categories && gameState.categories.length > 0 && (
+          <div className="mb-8">
+            <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle className="text-center">Game Board</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2">
+                  {/* Category Headers */}
+                  <div className="grid grid-cols-5 gap-2">
+                    {gameState.categories.map((category) => (
+                      <div key={category.id} className="bg-blue-600/30 backdrop-blur-sm border border-blue-400/30 p-3 text-center rounded-lg">
+                        <h2 className="text-sm md:text-base font-bold uppercase truncate">{category.name}</h2>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Question Grid */}
+                  {[0, 1, 2, 3, 4].map((rowIndex) => (
+                    <div key={rowIndex} className="grid grid-cols-5 gap-2">
+                      {gameState.categories.map((category) => {
+                        const question = category.questions[rowIndex];
+                        return (
+                          <div
+                            key={question.id}
+                            className={`p-4 md:p-6 text-xl md:text-2xl font-bold rounded-lg text-center backdrop-blur-sm ${
+                              question.answered
+                                ? "bg-gray-800/30 border border-gray-600/20 text-gray-600"
+                                : "bg-blue-600/40 border border-blue-400/30 text-yellow-400"
+                            }`}
+                          >
+                            {question.answered ? "" : `$${question.value}`}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Other Players */}
         <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
@@ -322,6 +372,23 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
           </CardContent>
         </Card>
       </div>
+
+      {/* Full-Screen Current Question Modal */}
+      <Dialog open={!!gameState?.currentQuestion} onOpenChange={() => {}}>
+        <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-12">
+          <div className="text-center space-y-8 w-full">
+            <div className="text-2xl font-bold text-blue-400 mb-6">
+              ${gameState?.currentQuestion?.value}
+            </div>
+            <div className="text-5xl md:text-6xl font-bold leading-tight px-8">
+              {gameState?.currentQuestion?.question}
+            </div>
+            <div className="mt-12 text-xl text-gray-400">
+              Read the question carefully and be ready to answer!
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirm Dialog */}
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
