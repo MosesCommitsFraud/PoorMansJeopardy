@@ -15,7 +15,7 @@ An interactive Jeopardy game built with Next.js 15, featuring host and player vi
 
 ### Prerequisites
 
-- Node.js 18+ installed
+- Node.js 22+ installed
 - pnpm package manager (`npm install -g pnpm`)
 
 ### Installation
@@ -105,9 +105,10 @@ pnpm dev
 
 ### Technologies Used
 
-- **Next.js 15** - React framework with App Router
-- **TypeScript** - Type-safe code
-- **Tailwind CSS** - Utility-first styling
+- **Next.js 16** - React framework with App Router
+- **React 19** - Latest React with improved performance
+- **TypeScript 5.7** - Type-safe code
+- **Tailwind CSS v4** - Modern CSS-first utility framework
 - **shadcn/ui** - Beautiful, accessible components
 - **Lucide React** - Icon library
 - **pnpm** - Fast, disk space efficient package manager
