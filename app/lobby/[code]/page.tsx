@@ -13,19 +13,31 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const [isHost, setIsHost] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
+  const [currentVersion, setCurrentVersion] = useState(0);
 
   useEffect(() => {
     const hostId = localStorage.getItem("jeopardy_host_id");
     loadLobby(hostId);
     
-    // Only poll while in lobby (stops when game starts)
-    const interval = setInterval(() => {
-      if (!lobby?.gameState?.gameStarted) {
-        loadLobby(hostId);
+    // Smart polling: only check version endpoint (tiny payload)
+    const interval = setInterval(async () => {
+      if (lobby?.gameState?.gameStarted) return; // Stop when game starts
+      
+      try {
+        const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
+        const data = await response.json();
+        
+        // Only fetch full lobby if version changed
+        if (data.version !== currentVersion) {
+          loadLobby(hostId);
+        }
+      } catch (error) {
+        console.error("Error checking version:", error);
       }
-    }, 5000); // Reduced to every 5 seconds to save Vercel function calls
+    }, 2000); // Check version every 2 seconds (super lightweight)
+    
     return () => clearInterval(interval);
-  }, [lobby?.gameState?.gameStarted]);
+  }, [currentVersion, lobby?.gameState?.gameStarted]);
 
   const loadLobby = async (hostId: string | null) => {
     try {
@@ -34,6 +46,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
       if (response.ok) {
         setLobby(data);
+        setCurrentVersion(data.version || 0);
         setIsHost(data.hostId === hostId);
         setError("");
         

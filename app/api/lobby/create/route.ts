@@ -21,12 +21,15 @@ export async function POST(request: Request) {
 
   const hostId = generateHostId();
 
+  const now = Date.now();
   const lobby: Lobby = {
     code,
     hostId,
     password: password || undefined,
-    createdAt: Date.now(),
+    createdAt: now,
     isActive: true,
+    version: 0,
+    lastModified: now,
     gameState: {
       categories: [],
       players: [],

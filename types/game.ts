@@ -41,5 +41,7 @@ export interface Lobby {
   createdAt: number;
   gameState: GameState;
   isActive: boolean;
+  version: number; // Increments on any change
+  lastModified: number; // Timestamp of last change
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Users, Lock } from "lucide-react";
 
 export default function JoinLobby() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [code, setCode] = useState("");
   const [playerName, setPlayerName] = useState("");
   const [password, setPassword] = useState("");
@@ -17,14 +18,26 @@ export default function JoinLobby() {
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState("");
 
-  const checkLobby = async () => {
-    if (!code || code.length !== 4) {
+  // Auto-fill code from URL query parameter
+  useEffect(() => {
+    const codeFromUrl = searchParams.get("code");
+    if (codeFromUrl) {
+      setCode(codeFromUrl.toUpperCase());
+      // Auto-check lobby if code is provided
+      checkLobby(codeFromUrl.toUpperCase());
+    }
+  }, [searchParams]);
+
+  const checkLobby = async (lobbyCode?: string) => {
+    const codeToCheck = lobbyCode || code;
+    
+    if (!codeToCheck || codeToCheck.length !== 4) {
       setError("Please enter a 4-character lobby code");
       return;
     }
 
     try {
-      const response = await fetch(`/api/lobby/${code.toUpperCase()}`);
+      const response = await fetch(`/api/lobby/${codeToCheck.toUpperCase()}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -107,7 +120,7 @@ export default function JoinLobby() {
                 maxLength={4}
                 className="text-center text-2xl font-bold tracking-widest uppercase"
               />
-              <Button onClick={checkLobby} variant="outline">
+              <Button onClick={() => checkLobby()} variant="outline">
                 Check
               </Button>
             </div>

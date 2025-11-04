@@ -14,30 +14,41 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
-  const [buzzerQueue, setBuzzerQueue] = useState<any[]>([]);
+  const [currentVersion, setCurrentVersion] = useState(0);
 
   useEffect(() => {
     loadGameState();
-    // Reduced polling to save Vercel function invocations
-    // Only polls when buzzer is active or question is open
-    const interval = setInterval(() => {
-      loadGameState();
-      loadBuzzerState();
-    }, 3000); // Every 3 seconds instead of 1
+    
+    // Smart polling: only check lightweight version endpoint
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
+        const data = await response.json();
+        
+        // Only fetch full state if version changed
+        if (data.version !== currentVersion) {
+          loadGameState();
+        }
+      } catch (error) {
+        console.error("Error checking version:", error);
+      }
+    }, 1500); // Check version every 1.5s (tiny payload, instant updates)
+    
     return () => clearInterval(interval);
-  }, []);
+  }, [currentVersion]);
 
   const loadGameState = async () => {
-    const response = await fetch(`/api/lobby/${resolvedParams.code}/state`);
+    const response = await fetch(`/api/lobby/${resolvedParams.code}`);
     const data = await response.json();
-    setGameState(data);
-    if (data.currentQuestion) {
-      setSelectedQuestion(data.currentQuestion);
+    
+    if (response.ok) {
+      setGameState(data.gameState);
+      setCurrentVersion(data.version || 0);
+      
+      if (data.gameState.currentQuestion) {
+        setSelectedQuestion(data.gameState.currentQuestion);
+      }
     }
-  };
-
-  const loadBuzzerState = async () => {
-    setBuzzerQueue(gameState?.buzzerQueue || []);
   };
 
   const updateGameState = async (updates: Partial<GameState>) => {
@@ -188,11 +199,11 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   </Button>
                 </div>
               </div>
-              {buzzerQueue.length > 0 && (
+              {(gameState?.buzzerQueue || []).length > 0 && (
                 <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
                   <div className="font-bold mb-2">Buzzer Queue:</div>
                   <div className="space-y-2">
-                    {buzzerQueue.map((buzz, index) => (
+                    {(gameState?.buzzerQueue || []).map((buzz, index) => (
                       <div key={index} className="flex items-center gap-2">
                         <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
                           {index + 1}

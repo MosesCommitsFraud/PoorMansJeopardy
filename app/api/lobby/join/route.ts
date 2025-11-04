@@ -41,6 +41,10 @@ export async function POST(request: Request) {
     isHost: false,
   });
 
+  // Increment version to trigger updates for all clients
+  lobby.version = (lobby.version || 0) + 1;
+  lobby.lastModified = Date.now();
+
   await kvStore.setLobby(code.toUpperCase(), lobby, 86400);
 
   return NextResponse.json({ 

@@ -13,6 +13,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const [playerName, setPlayerName] = useState<string>("");
   const [hasBuzzed, setHasBuzzed] = useState(false);
   const [buzzerPosition, setBuzzerPosition] = useState<number | null>(null);
+  const [currentVersion, setCurrentVersion] = useState(0);
 
   useEffect(() => {
     const savedPlayerId = localStorage.getItem("jeopardy_player_id");
@@ -27,25 +28,39 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   useEffect(() => {
     if (playerId) {
       loadGameState();
-      // Reduced polling to save Vercel function invocations on free tier
-      const interval = setInterval(() => {
-        loadGameState();
-        checkBuzzerStatus();
-      }, 3000); // Every 3 seconds instead of 1
+      
+      // Smart polling: only check lightweight version endpoint
+      const interval = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
+          const data = await response.json();
+          
+          // Only fetch full state if version changed
+          if (data.version !== currentVersion) {
+            loadGameState();
+          }
+        } catch (error) {
+          console.error("Error checking version:", error);
+        }
+      }, 1500); // Check version every 1.5s (tiny payload)
+      
       return () => clearInterval(interval);
     }
-  }, [playerId]);
+  }, [playerId, currentVersion]);
 
   const loadGameState = async () => {
-    const response = await fetch(`/api/lobby/${resolvedParams.code}/state`);
+    const response = await fetch(`/api/lobby/${resolvedParams.code}`);
     const data = await response.json();
-    setGameState(data);
+    
+    if (response.ok) {
+      setGameState(data.gameState);
+      setCurrentVersion(data.version || 0);
+      checkBuzzerStatus(data.gameState);
+    }
   };
 
-  const checkBuzzerStatus = async () => {
-    if (!gameState) return;
-    
-    const position = gameState.buzzerQueue?.findIndex((b: any) => b.playerId === playerId);
+  const checkBuzzerStatus = (state: GameState) => {
+    const position = state.buzzerQueue?.findIndex((b: any) => b.playerId === playerId);
     if (position !== -1 && position !== undefined) {
       setBuzzerPosition(position + 1);
       setHasBuzzed(true);
@@ -57,22 +72,26 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
   const buzz = async () => {
     if (gameState?.buzzerActive && !hasBuzzed) {
-      const updatedQueue = [...(gameState.buzzerQueue || []), {
-        playerId,
-        playerName,
-        timestamp: Date.now(),
-      }];
-      
-      await fetch(`/api/lobby/${resolvedParams.code}/state`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          gameState: { ...gameState, buzzerQueue: updatedQueue }
-        }),
-      });
-      
-      setHasBuzzed(true);
-      checkBuzzerStatus();
+      try {
+        const response = await fetch(`/api/lobby/${resolvedParams.code}/buzz`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ playerId, playerName }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          setHasBuzzed(true);
+          setBuzzerPosition(data.position);
+          // Force immediate update
+          loadGameState();
+        } else {
+          console.error("Buzz error:", data.error);
+        }
+      } catch (error) {
+        console.error("Buzz failed:", error);
+      }
     }
   };
 

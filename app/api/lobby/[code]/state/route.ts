@@ -30,8 +30,12 @@ export async function POST(
   }
 
   lobby.gameState = gameState;
+  // Increment version to trigger updates for all clients
+  lobby.version = (lobby.version || 0) + 1;
+  lobby.lastModified = Date.now();
+  
   await kvStore.setLobby(code.toUpperCase(), lobby, 86400);
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, version: lobby.version });
 }
 
