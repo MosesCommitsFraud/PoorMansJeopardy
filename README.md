@@ -16,18 +16,18 @@ An interactive Jeopardy game built with Next.js 15, featuring host and player vi
 ### Prerequisites
 
 - Node.js 18+ installed
-- npm or yarn package manager
+- pnpm package manager (`npm install -g pnpm`)
 
 ### Installation
 
 1. Install dependencies:
 ```bash
-npm install
+pnpm install
 ```
 
 2. Run the development server:
 ```bash
-npm run dev
+pnpm dev
 ```
 
 3. Open your browser:
@@ -110,6 +110,7 @@ npm run dev
 - **Tailwind CSS** - Utility-first styling
 - **shadcn/ui** - Beautiful, accessible components
 - **Lucide React** - Icon library
+- **pnpm** - Fast, disk space efficient package manager
 
 ## Future Enhancements
 
