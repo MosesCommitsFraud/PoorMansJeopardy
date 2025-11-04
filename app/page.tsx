@@ -7,7 +7,7 @@ import { Crown, Users } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background flex items-center justify-center p-4">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-5xl mx-auto">
         <div className="text-center mb-12 space-y-4">
           <h1 className="text-6xl md:text-7xl font-black tracking-tight">
@@ -27,7 +27,7 @@ export default function Home() {
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           {/* Host Card */}
           <Link href="/lobby/create" className="group">
-            <Card className="h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border-2 hover:border-primary/50 bg-card/80 backdrop-blur-sm">
+            <Card className="h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border border-white/20 hover:border-primary/50 bg-black/20 backdrop-blur-xl">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <Crown className="w-8 h-8 text-white" />
@@ -62,7 +62,7 @@ export default function Home() {
 
           {/* Player Card */}
           <Link href="/lobby/join" className="group">
-            <Card className="h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border-2 hover:border-primary/50 bg-card/80 backdrop-blur-sm">
+            <Card className="h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border border-white/20 hover:border-primary/50 bg-black/20 backdrop-blur-xl">
               <CardHeader className="text-center pb-4">
                 <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <Users className="w-8 h-8 text-white" />

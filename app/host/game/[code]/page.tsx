@@ -172,14 +172,14 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <div className="flex justify-between items-center">
             <div className="text-center flex-1">
-              <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
-              <p className="text-blue-200">Host View - Lobby: <span className="font-mono font-bold text-yellow-300">{resolvedParams.code}</span></p>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
+              <p className="text-gray-300">Host View - Lobby: <span className="font-mono font-bold text-yellow-400">{resolvedParams.code}</span></p>
             </div>
             <Button onClick={endGame} variant="destructive" size="sm">
               <XCircle className="mr-2 h-4 w-4" />
@@ -190,24 +190,24 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
         {/* Players and Scores */}
         <div className="mb-6">
-          <Card>
+          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
             <CardHeader>
               <CardTitle>Players & Scores</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {gameState.players.map((player) => (
-                  <div key={player.id} className="bg-blue-50 p-4 rounded-lg">
+                  <div key={player.id} className="bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <Trophy className="h-5 w-5 text-yellow-600" />
-                      <div className="text-2xl font-bold text-blue-900">${player.score}</div>
+                      <Trophy className="h-5 w-5 text-yellow-400" />
+                      <div className="text-2xl font-bold">${player.score}</div>
                     </div>
-                    <div className="font-semibold text-gray-700">{player.name}</div>
+                    <div className="font-semibold">{player.name}</div>
                     <div className="flex gap-2 mt-2">
-                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, 100)}>
+                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, 100)} className="backdrop-blur-sm">
                         <Plus className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, -100)}>
+                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, -100)} className="backdrop-blur-sm">
                         <Minus className="h-3 w-3" />
                       </Button>
                     </div>
@@ -220,7 +220,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
         {/* Buzzer Control */}
         <div className="mb-6">
-          <Card>
+          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
@@ -246,12 +246,12 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                 </div>
               </div>
               {(gameState?.buzzerQueue || []).length > 0 && (
-                <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
+                <div className="mt-4 p-4 bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 rounded-lg">
                   <div className="font-bold mb-2">Buzzer Queue:</div>
                   <div className="space-y-2">
                     {(gameState?.buzzerQueue || []).map((buzz, index) => (
                       <div key={index} className="flex items-center gap-2">
-                        <span className="bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                        <span className="bg-blue-600/50 backdrop-blur-sm border border-blue-400/30 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
                           {index + 1}
                         </span>
                         <span className="font-semibold">{buzz.playerName}</span>
@@ -268,8 +268,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         <div className="grid gap-2">
           <div className="grid grid-cols-5 gap-2">
             {gameState.categories.map((category) => (
-              <div key={category.id} className="bg-blue-700 p-4 text-center rounded-lg">
-                <h2 className="text-xl font-bold text-white uppercase">{category.name}</h2>
+              <div key={category.id} className="bg-blue-600/30 backdrop-blur-sm border border-blue-400/30 p-4 text-center rounded-lg">
+                <h2 className="text-xl font-bold uppercase">{category.name}</h2>
               </div>
             ))}
           </div>
@@ -283,10 +283,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     key={question.id}
                     onClick={() => selectQuestion(category.id, question.id)}
                     disabled={question.answered}
-                    className={`p-8 text-3xl font-bold rounded-lg transition-all ${
+                    className={`p-8 text-3xl font-bold rounded-lg transition-all backdrop-blur-sm ${
                       question.answered
-                        ? "bg-blue-900 text-blue-800 cursor-not-allowed"
-                        : "bg-blue-600 text-yellow-400 hover:bg-blue-500 cursor-pointer"
+                        ? "bg-gray-800/30 border border-gray-600/20 text-gray-600 cursor-not-allowed"
+                        : "bg-blue-600/40 border border-blue-400/30 text-yellow-400 hover:bg-blue-500/50 hover:border-blue-300/40 cursor-pointer"
                     }`}
                   >
                     {question.answered ? "" : `$${question.value}`}
@@ -300,20 +300,20 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
       {/* Question Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={() => closeQuestion()}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl border border-white/20 bg-black/30 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle>Question - ${selectedQuestion?.value}</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            <div className="bg-blue-100 p-6 rounded-lg">
-              <div className="text-sm font-semibold text-gray-600 mb-2">QUESTION:</div>
-              <div className="text-2xl font-bold text-blue-900">{selectedQuestion?.question}</div>
+            <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 p-6 rounded-lg">
+              <div className="text-sm font-semibold text-blue-300 mb-2">QUESTION:</div>
+              <div className="text-2xl font-bold">{selectedQuestion?.question}</div>
             </div>
             
             {showAnswer && (
-              <div className="bg-green-100 p-6 rounded-lg">
-                <div className="text-sm font-semibold text-gray-600 mb-2">ANSWER:</div>
-                <div className="text-2xl font-bold text-green-900">{selectedQuestion?.answer}</div>
+              <div className="bg-green-500/20 backdrop-blur-sm border border-green-400/30 p-6 rounded-lg">
+                <div className="text-sm font-semibold text-green-300 mb-2">ANSWER:</div>
+                <div className="text-2xl font-bold">{selectedQuestion?.answer}</div>
               </div>
             )}
             

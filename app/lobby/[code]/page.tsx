@@ -258,7 +258,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const playerName = localStorage.getItem("jeopardy_player_name");
 
   return (
-    <main className="min-h-screen bg-background p-8">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold mb-4 tracking-wider bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-purple-400 dark:to-blue-400">
@@ -323,7 +323,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
         </div>
 
         {/* Lobby Code Card */}
-        <Card className="mb-6 bg-gradient-to-br from-yellow-400 to-yellow-600 border-0">
+        <Card className="mb-6 bg-gradient-to-br from-yellow-400 to-yellow-600 border-0 shadow-2xl">
           <CardContent className="p-6 text-center">
             <div className="text-sm font-semibold text-yellow-900 mb-2">LOBBY CODE</div>
             <div className="text-6xl font-bold text-white tracking-widest mb-4 font-mono">
@@ -343,7 +343,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
         </Card>
 
         {/* Players Card */}
-        <Card className="mb-6">
+        <Card className="mb-6 border border-white/20 bg-black/20 backdrop-blur-xl">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Users className="mr-2 h-5 w-5" />
@@ -395,7 +395,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
         {/* Host Controls */}
         {isHost && (
-          <Card>
+          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
             <CardHeader>
               <CardTitle>Host Controls</CardTitle>
             </CardHeader>
@@ -436,7 +436,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
         {/* Player Waiting */}
         {!isHost && (
-          <Card>
+          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
             <CardContent className="p-8 text-center">
               <div className="text-6xl mb-4">⏳</div>
               <h3 className="text-xl font-semibold mb-2">Waiting for host...</h3>

@@ -169,17 +169,17 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const currentPlayer = gameState?.players.find(p => p.id === playerId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-start">
             <div className="text-center flex-1">
-              <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
-              <p className="text-blue-200 text-xl">Player: {playerName}</p>
-              <p className="text-blue-300 text-sm font-mono">Lobby: {resolvedParams.code}</p>
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
+              <p className="text-gray-300 text-xl">Player: {playerName}</p>
+              <p className="text-gray-400 text-sm font-mono">Lobby: {resolvedParams.code}</p>
             </div>
-            <Button onClick={leaveGame} variant="outline" size="sm">
+            <Button onClick={leaveGame} variant="outline" size="sm" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
               <LogOut className="mr-2 h-4 w-4" />
               Leave
             </Button>
@@ -188,11 +188,11 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
         {/* Player Score */}
         <div className="mb-8">
-          <Card className="bg-gradient-to-r from-blue-600 to-purple-600 border-0">
+          <Card className="bg-gradient-to-r from-blue-600/40 to-purple-600/40 border border-blue-400/30 backdrop-blur-xl">
             <CardContent className="p-8">
-              <div className="flex items-center justify-between text-white">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <Trophy className="h-12 w-12" />
+                  <Trophy className="h-12 w-12 text-yellow-400" />
                   <div>
                     <div className="text-sm opacity-90">Your Score</div>
                     <div className="text-5xl font-bold">${currentPlayer?.score || 0}</div>
@@ -214,16 +214,16 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         {/* Current Question Display */}
         {gameState?.currentQuestion && (
           <div className="mb-8">
-            <Card>
+            <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
               <CardHeader>
                 <CardTitle className="text-center">Current Question</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="bg-blue-100 p-8 rounded-lg text-center">
-                  <div className="text-sm font-semibold text-gray-600 mb-4">
+                <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 p-8 rounded-lg text-center">
+                  <div className="text-sm font-semibold text-blue-300 mb-4">
                     ${gameState.currentQuestion.value}
                   </div>
-                  <div className="text-2xl font-bold text-blue-900">
+                  <div className="text-2xl font-bold">
                     {gameState.currentQuestion.question}
                   </div>
                 </div>
@@ -234,20 +234,20 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
         {/* Buzzer */}
         <div className="mb-8">
-          <Card>
+          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
             <CardContent className="p-8">
               <div className="text-center">
                 <div className="mb-6">
-                  <div className={`inline-block px-6 py-3 rounded-full text-lg font-bold ${
-                    gameState?.buzzerActive ? "bg-green-500 text-white animate-pulse" : "bg-gray-300 text-gray-600"
+                  <div className={`inline-block px-6 py-3 rounded-full text-lg font-bold backdrop-blur-sm border ${
+                    gameState?.buzzerActive ? "bg-green-500/50 border-green-400/50 text-white animate-pulse" : "bg-gray-500/30 border-gray-400/30 text-gray-400"
                   }`}>
                     {gameState?.buzzerActive ? "BUZZER ACTIVE" : "BUZZER INACTIVE"}
                   </div>
                 </div>
 
                 {buzzerPosition !== null && (
-                  <div className="mb-6 p-4 bg-yellow-100 rounded-lg">
-                    <div className="text-xl font-bold text-yellow-900">
+                  <div className="mb-6 p-4 bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 rounded-lg">
+                    <div className="text-xl font-bold text-yellow-400">
                       You are #{buzzerPosition} in the buzzer queue!
                     </div>
                   </div>
@@ -256,10 +256,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 <button
                   onClick={buzz}
                   disabled={!gameState?.buzzerActive || hasBuzzed}
-                  className={`w-full h-48 rounded-2xl text-4xl font-bold transition-all transform ${
+                  className={`w-full h-48 rounded-2xl text-4xl font-bold transition-all transform backdrop-blur-sm border ${
                     gameState?.buzzerActive && !hasBuzzed
-                      ? "bg-gradient-to-br from-red-500 to-red-700 text-white hover:scale-105 active:scale-95 shadow-2xl cursor-pointer"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      ? "bg-red-600/60 border-red-400/50 text-white hover:scale-105 active:scale-95 shadow-2xl cursor-pointer hover:bg-red-500/70"
+                      : "bg-gray-600/30 border-gray-500/30 text-gray-500 cursor-not-allowed"
                   }`}
                 >
                   {hasBuzzed ? (
@@ -275,7 +275,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                   )}
                 </button>
                 
-                <div className="mt-4 text-sm text-gray-600">
+                <div className="mt-4 text-sm text-gray-400">
                   Press SPACEBAR or click button to buzz in
                 </div>
               </div>
@@ -284,7 +284,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         </div>
 
         {/* Other Players */}
-        <Card>
+        <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Users className="mr-2 h-5 w-5" />
@@ -298,22 +298,22 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 .map((player, index) => (
                   <div 
                     key={player.id}
-                    className={`flex items-center justify-between p-4 rounded-lg ${
-                      player.id === playerId ? "bg-blue-100 border-2 border-blue-500" : "bg-gray-100"
+                    className={`flex items-center justify-between p-4 rounded-lg backdrop-blur-sm ${
+                      player.id === playerId ? "bg-blue-500/30 border-2 border-blue-400/50" : "bg-white/10 border border-white/20"
                     }`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="text-2xl font-bold text-gray-600">#{index + 1}</div>
+                      <div className="text-2xl font-bold text-gray-400">#{index + 1}</div>
                       <div>
                         <div className="font-semibold text-lg">
                           {player.name}
                           {player.id === playerId && (
-                            <span className="ml-2 text-sm text-blue-600">(You)</span>
+                            <span className="ml-2 text-sm text-blue-400">(You)</span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="text-2xl font-bold text-blue-900">
+                    <div className="text-2xl font-bold">
                       ${player.score}
                     </div>
                   </div>

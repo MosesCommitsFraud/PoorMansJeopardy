@@ -148,8 +148,8 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center">
-        <Card>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center">
+        <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
           <CardContent className="p-8">
             <p className="text-lg">Loading...</p>
           </CardContent>
@@ -159,22 +159,22 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Poor Man&apos;s Jeopardy - Setup</h1>
-            <p className="text-blue-200">Lobby Code: <span className="font-mono font-bold text-yellow-300">{resolvedParams.code}</span></p>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">Poor Man&apos;s Jeopardy - Setup</h1>
+            <p className="text-gray-300">Lobby Code: <span className="font-mono font-bold text-yellow-400">{resolvedParams.code}</span></p>
           </div>
           <div className="flex gap-4">
-            <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline">
+            <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Lobby
             </Button>
-            <Button onClick={loadDefaultGame} variant="outline">
+            <Button onClick={loadDefaultGame} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
               Load Default Game
             </Button>
-            <Button onClick={addCategory} variant="secondary">
+            <Button onClick={addCategory} variant="secondary" className="backdrop-blur-sm">
               <Plus className="mr-2 h-4 w-4" />
               Add Category
             </Button>
@@ -187,7 +187,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
         <div className="grid grid-cols-1 gap-6">
           {categories.map((category) => (
-            <Card key={category.id}>
+            <Card key={category.id} className="border border-white/20 bg-black/20 backdrop-blur-xl">
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div className="flex-1 mr-4">
