@@ -4,7 +4,8 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle, AlertCircle, Edit2 } from "lucide-react";
 import { Spinner } from "@heroui/spinner";
 import { 
   AlertDialog, 
@@ -29,6 +30,8 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const [alertMessage, setAlertMessage] = useState("");
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [lobbyName, setLobbyName] = useState("");
 
   useEffect(() => {
     const hostId = localStorage.getItem("jeopardy_host_id");
@@ -80,6 +83,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
         setLobby(data);
         setCurrentVersion(data.version || 0);
         setIsHost(data.hostId === hostId);
+        setLobbyName(data.lobbyName || "");
         setError("");
         
         // If game has started, redirect to game page
@@ -135,6 +139,38 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     } catch (error) {
       setAlertMessage("Failed to start game");
       setShowAlert(true);
+    }
+  };
+
+  const updateLobbyName = async () => {
+    if (!isHost) return;
+    
+    try {
+      const hostId = localStorage.getItem("jeopardy_host_id");
+      const trimmedName = lobbyName.trim();
+      
+      console.log("Updating lobby name for code:", resolvedParams.code);
+      console.log("New name:", trimmedName, "Host ID:", hostId);
+      
+      const response = await fetch(`/api/lobby/${resolvedParams.code}/name`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lobbyName: trimmedName, hostId }),
+      });
+
+      console.log("Response status:", response.status);
+      const data = await response.json();
+      console.log("Response data:", data);
+
+      if (response.ok) {
+        setEditingName(false);
+        // Reload lobby to get updated data
+        loadLobby(hostId);
+      } else {
+        console.error("Failed to update name:", data);
+      }
+    } catch (error) {
+      console.error("Error updating lobby name:", error);
     }
   };
 
@@ -237,9 +273,62 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
           <h1 className="text-5xl font-bold mb-4 tracking-wider bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-purple-400 dark:to-blue-400">
             POOR MAN&apos;S JEOPARDY
           </h1>
-          <p className="text-xl text-muted-foreground">
-            {isHost ? "Host Lobby" : "Player Lobby"}
-          </p>
+          
+          {/* Lobby Name */}
+          {!editingName && (
+            <div className="flex items-center justify-center gap-2">
+              <h2 className="text-2xl font-semibold">
+                {lobbyName || `Lobby ${resolvedParams.code}`}
+              </h2>
+              {isHost && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditingName(true);
+                    setLobbyName("");
+                  }}
+                  className="hover:bg-accent"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          )}
+          
+          {/* Edit Lobby Name (Host Only) */}
+          {editingName && (
+            <div className="flex items-center justify-center gap-2 max-w-md mx-auto mb-2">
+              <Input
+                value={lobbyName}
+                onChange={(e) => setLobbyName(e.target.value)}
+                placeholder="edit lobby name"
+                className="text-center"
+                maxLength={50}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") updateLobbyName();
+                  if (e.key === "Escape") {
+                    setEditingName(false);
+                    setLobbyName(lobby?.lobbyName || "");
+                  }
+                }}
+              />
+              <Button onClick={updateLobbyName} size="sm">
+                <Check className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditingName(false);
+                  setLobbyName(lobby?.lobbyName || "");
+                }}
+                variant="outline"
+                size="sm"
+              >
+                <XCircle className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Lobby Code Card */}

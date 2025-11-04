@@ -37,6 +37,7 @@ export interface GameState {
 export interface Lobby {
   code: string;
   hostId: string;
+  lobbyName?: string;
   password?: string;
   createdAt: number;
   gameState: GameState;

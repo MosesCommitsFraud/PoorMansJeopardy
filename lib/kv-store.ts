@@ -1,8 +1,16 @@
 // KV Store wrapper that works both locally and on Vercel
 import { Lobby } from "@/types/game";
 
-// In-memory fallback for local development
-const localStore = new Map<string, Lobby>();
+// In-memory fallback for local development - using global to persist across hot reloads
+declare global {
+  var localLobbyStore: Map<string, Lobby> | undefined;
+}
+
+// Persist the store across hot reloads in development
+const localStore = global.localLobbyStore || new Map<string, Lobby>();
+if (!global.localLobbyStore) {
+  global.localLobbyStore = localStore;
+}
 
 // Check if we're in Vercel environment
 const isVercel = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
@@ -28,7 +36,13 @@ export const kvStore = {
         return null;
       }
     }
-    return localStore.get(`lobby:${code}`) || null;
+    const key = `lobby:${code}`;
+    const lobby = localStore.get(key) || null;
+    console.log(`[kvStore] getLobby(${code}) - Key: ${key}, Found: ${!!lobby}, Store size: ${localStore.size}`);
+    if (!lobby && localStore.size > 0) {
+      console.log(`[kvStore] Available keys:`, Array.from(localStore.keys()));
+    }
+    return lobby;
   },
 
   async setLobby(code: string, lobby: Lobby, ttl: number = 86400): Promise<void> {
@@ -39,7 +53,9 @@ export const kvStore = {
         console.error("KV set error:", error);
       }
     } else {
-      localStore.set(`lobby:${code}`, lobby);
+      const key = `lobby:${code}`;
+      localStore.set(key, lobby);
+      console.log(`[kvStore] setLobby(${code}) - Key: ${key}, Store size: ${localStore.size}`);
     }
   },
 
