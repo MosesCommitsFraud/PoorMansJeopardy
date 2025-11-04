@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, ImagePlus, Film, X } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X } from "lucide-react";
 import { Category, Question, GameTemplate } from "@/types/game";
 import { templateStorage } from "@/lib/template-storage";
 import { CategoryBrowser } from "@/components/category-browser";
@@ -42,13 +42,6 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   const [isGenerating, setIsGenerating] = useState(false);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [gifPickerTarget, setGifPickerTarget] = useState<{
-    categoryId: string;
-    questionId: string;
-    type: 'question' | 'answer';
-  } | null>(null);
-  const [showImageUrlDialog, setShowImageUrlDialog] = useState(false);
-  const [imageUrlInput, setImageUrlInput] = useState("");
-  const [imageUrlTarget, setImageUrlTarget] = useState<{
     categoryId: string;
     questionId: string;
     type: 'question' | 'answer';
@@ -290,25 +283,95 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     }
   };
 
-  const openImageUrlDialog = (categoryId: string, questionId: string, type: 'question' | 'answer') => {
-    setImageUrlTarget({ categoryId, questionId, type });
-    setImageUrlInput("");
-    setShowImageUrlDialog(true);
-  };
-
-  const handleSetImageUrl = () => {
-    if (imageUrlTarget && imageUrlInput.trim()) {
-      const field = imageUrlTarget.type === 'question' ? 'questionImageUrl' : 'answerImageUrl';
-      updateQuestion(imageUrlTarget.categoryId, imageUrlTarget.questionId, field, imageUrlInput.trim());
-      setImageUrlTarget(null);
-      setImageUrlInput("");
-      setShowImageUrlDialog(false);
-    }
-  };
-
   const removeImage = (categoryId: string, questionId: string, type: 'question' | 'answer') => {
     const field = type === 'question' ? 'questionImageUrl' : 'answerImageUrl';
     updateQuestion(categoryId, questionId, field, '');
+  };
+
+  // Check if a string is a valid image URL
+  const isImageUrl = (text: string): boolean => {
+    // Must start with http:// or https://
+    if (!text.match(/^https?:\/\//i)) return false;
+    
+    // Check for direct image file extensions
+    const imageExtPattern = /\.(jpg|jpeg|png|gif|webp|bmp|svg|apng|avif|jfif)(\?.*)?$/i;
+    if (imageExtPattern.test(text)) return true;
+    
+    // Check for common image hosting services
+    const imageHosts = [
+      'imgur.com',
+      'i.imgur.com',
+      'giphy.com',
+      'media.giphy.com',
+      'tenor.com',
+      'media.tenor.com',
+      'i.redd.it',
+      'preview.redd.it',
+      'pbs.twimg.com',
+      'media.discordapp.net',
+      'cdn.discordapp.com',
+      'i.postimg.cc',
+      'postimg.cc'
+    ];
+    
+    if (imageHosts.some(host => text.includes(host))) return true;
+    
+    // Check for common CDN patterns
+    if (text.match(/\/media\//i) || text.match(/\/cdn\//i) || text.match(/\/images?\//i)) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Handle text change with auto image detection
+  const handleTextChange = (categoryId: string, questionId: string, field: 'question' | 'answer', value: string) => {
+    updateQuestion(categoryId, questionId, field, value);
+    
+    // Auto-detect image URLs - check each line
+    const lines = value.split('\n');
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine && isImageUrl(trimmedLine)) {
+        const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
+        updateQuestion(categoryId, questionId, imageField, trimmedLine);
+        break; // Use first valid URL found
+      }
+    }
+  };
+
+  // Handle paste event for clipboard images
+  const handlePaste = async (
+    e: React.ClipboardEvent, 
+    categoryId: string, 
+    questionId: string, 
+    field: 'question' | 'answer'
+  ) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    // Check for image in clipboard
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      // Check if it's an image
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        
+        const file = item.getAsFile();
+        if (file) {
+          // Convert to data URL
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const dataUrl = event.target?.result as string;
+            const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
+            updateQuestion(categoryId, questionId, imageField, dataUrl);
+          };
+          reader.readAsDataURL(file);
+        }
+        return;
+      }
+    }
   };
 
   if (isLoading) {
@@ -423,33 +486,26 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                         </div>
                       </div>
                       <div className="col-span-5">
-                        <Label className="text-sm">Question</Label>
-                        <Textarea
-                          value={question.question}
-                          onChange={(e) => updateQuestion(category.id, question.id, "question", e.target.value)}
-                          placeholder="Enter question..."
-                          className="min-h-[80px]"
-                        />
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <Label className="text-sm">Question</Label>
                           <Button
                             type="button"
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => openGifPicker(category.id, question.id, 'question')}
+                            className="h-6 px-2 text-xs"
                           >
-                            <Film className="h-4 w-4 mr-1" />
+                            <Film className="h-3 w-3 mr-1" />
                             GIF
                           </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openImageUrlDialog(category.id, question.id, 'question')}
-                          >
-                            <ImagePlus className="h-4 w-4 mr-1" />
-                            Image
-                          </Button>
                         </div>
+                        <Textarea
+                          value={question.question}
+                          onChange={(e) => handleTextChange(category.id, question.id, "question", e.target.value)}
+                          onPaste={(e) => handlePaste(e, category.id, question.id, "question")}
+                          placeholder="Enter question, paste image URL, or paste image from clipboard..."
+                          className="min-h-[80px]"
+                        />
                         {question.questionImageUrl && (
                           <div className="mt-2 relative border rounded overflow-hidden">
                             <img 
@@ -470,33 +526,26 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                         )}
                       </div>
                       <div className="col-span-6">
-                        <Label className="text-sm">Answer</Label>
-                        <Textarea
-                          value={question.answer}
-                          onChange={(e) => updateQuestion(category.id, question.id, "answer", e.target.value)}
-                          placeholder="Enter answer..."
-                          className="min-h-[80px]"
-                        />
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <Label className="text-sm">Answer</Label>
                           <Button
                             type="button"
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => openGifPicker(category.id, question.id, 'answer')}
+                            className="h-6 px-2 text-xs"
                           >
-                            <Film className="h-4 w-4 mr-1" />
+                            <Film className="h-3 w-3 mr-1" />
                             GIF
                           </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openImageUrlDialog(category.id, question.id, 'answer')}
-                          >
-                            <ImagePlus className="h-4 w-4 mr-1" />
-                            Image
-                          </Button>
                         </div>
+                        <Textarea
+                          value={question.answer}
+                          onChange={(e) => handleTextChange(category.id, question.id, "answer", e.target.value)}
+                          onPaste={(e) => handlePaste(e, category.id, question.id, "answer")}
+                          placeholder="Enter answer, paste image URL, or paste image from clipboard..."
+                          className="min-h-[80px]"
+                        />
                         {question.answerImageUrl && (
                           <div className="mt-2 relative border rounded overflow-hidden">
                             <img 
@@ -579,55 +628,6 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
         onSelectGif={handleSelectGif}
         title={gifPickerTarget?.type === 'question' ? 'Add GIF to Question' : 'Add GIF to Answer'}
       />
-
-      {/* Image URL Dialog */}
-      <Dialog open={showImageUrlDialog} onOpenChange={setShowImageUrlDialog}>
-        <DialogContent className="border border-white/20 bg-black/40 backdrop-blur-xl">
-          <DialogHeader>
-            <DialogTitle>
-              {imageUrlTarget?.type === 'question' ? 'Add Image to Question' : 'Add Image to Answer'}
-            </DialogTitle>
-            <DialogDescription>
-              Enter the URL of an image to add
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="image-url">Image URL</Label>
-              <Input
-                id="image-url"
-                value={imageUrlInput}
-                onChange={(e) => setImageUrlInput(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSetImageUrl();
-                }}
-                autoFocus
-              />
-            </div>
-            {imageUrlInput && (
-              <div className="border rounded overflow-hidden">
-                <img 
-                  src={imageUrlInput} 
-                  alt="Preview" 
-                  className="w-full max-h-48 object-contain bg-black/20"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowImageUrlDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSetImageUrl} disabled={!imageUrlInput.trim()}>
-              Add Image
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Manage Templates Dialog */}
       <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>
