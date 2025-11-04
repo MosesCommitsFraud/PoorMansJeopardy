@@ -16,6 +16,7 @@ export interface Player {
   id: string;
   name: string;
   score: number;
+  isHost: boolean;
 }
 
 export interface BuzzerEvent {
@@ -31,5 +32,14 @@ export interface GameState {
   buzzerActive: boolean;
   buzzerQueue: BuzzerEvent[];
   gameStarted: boolean;
+}
+
+export interface Lobby {
+  code: string;
+  hostId: string;
+  password?: string;
+  createdAt: number;
+  gameState: GameState;
+  isActive: boolean;
 }
 
