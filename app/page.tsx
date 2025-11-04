@@ -37,22 +37,8 @@ export default function Home() {
                   Create and manage your own trivia session
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span>Custom questions and categories</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span>Control game flow and scoring</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span>Optional password protection</span>
-                  </div>
-                </div>
-                <Button className="w-full mt-4" size="lg">
+              <CardContent>
+                <Button className="w-full" size="lg">
                   <Crown className="w-4 h-4 mr-2" />
                   Start Hosting
                 </Button>
@@ -72,33 +58,14 @@ export default function Home() {
                   Enter a game code and start playing
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span>Quick join with 4-char code</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span>Real-time buzzer system</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    <span>No registration needed</span>
-                  </div>
-                </div>
-                <Button className="w-full mt-4" size="lg" variant="secondary">
+              <CardContent>
+                <Button className="w-full" size="lg" variant="secondary">
                   <Users className="w-4 h-4 mr-2" />
                   Join Now
                 </Button>
               </CardContent>
             </Card>
           </Link>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center text-sm text-muted-foreground mt-8">
-          <p>Free to use • No registration • Active for 24 hours</p>
         </div>
       </div>
     </main>
