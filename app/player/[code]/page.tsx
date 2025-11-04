@@ -187,190 +187,190 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const currentPlayer = gameState?.players.find(p => p.id === playerId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex justify-between items-start">
-            <div className="text-center flex-1">
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
-              <p className="text-gray-300 text-xl">Player: {playerName}</p>
-              <p className="text-gray-400 text-sm font-mono">Lobby: {resolvedParams.code}</p>
-            </div>
-            <Button onClick={leaveGame} variant="outline" size="sm" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
-              <LogOut className="mr-2 h-4 w-4" />
-              Leave
-            </Button>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-3">
+      <div className="max-w-[1800px] mx-auto">
+        {/* Compact Header */}
+        <div className="mb-3 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+              POOR MAN&apos;S JEOPARDY
+            </h1>
+            <p className="text-sm text-gray-400">
+              <span className="font-semibold">{playerName}</span> • {resolvedParams.code}
+            </p>
           </div>
+          <Button onClick={leaveGame} variant="outline" size="sm" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
+            <LogOut className="mr-2 h-4 w-4" />
+            Leave
+          </Button>
         </div>
 
-        {/* Player Score */}
-        <div className="mb-8">
-          <Card className="bg-gradient-to-r from-blue-600/40 to-purple-600/40 border border-blue-400/30 backdrop-blur-xl">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <Trophy className="h-12 w-12 text-yellow-400" />
-                  <div>
-                    <div className="text-sm opacity-90">Your Score</div>
-                    <div className="text-5xl font-bold">${currentPlayer?.score || 0}</div>
-                  </div>
+        {/* Compact Buzzer Banner */}
+        <Card className="border border-white/20 bg-black/20 backdrop-blur-xl mb-3">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between gap-4">
+              {/* Buzzer Status */}
+              <div className="flex items-center gap-3">
+                <div className={`px-4 py-2 rounded-full text-sm font-bold backdrop-blur-sm border ${
+                  gameState?.buzzerActive ? "bg-green-500/50 border-green-400/50 text-white animate-pulse" : "bg-gray-500/30 border-gray-400/30 text-gray-400"
+                }`}>
+                  {gameState?.buzzerActive ? "🔔 BUZZER ACTIVE" : "🔕 BUZZER INACTIVE"}
                 </div>
-                <div className="text-right">
-                  <div className="text-sm opacity-90">Position</div>
-                  <div className="text-3xl font-bold">
-                    #{gameState?.players
-                      .sort((a, b) => b.score - a.score)
-                      .findIndex(p => p.id === playerId) + 1 || "?"}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Buzzer */}
-        <div className="mb-8">
-          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
-            <CardContent className="p-8">
-              <div className="text-center">
-                <div className="mb-6">
-                  <div className={`inline-block px-6 py-3 rounded-full text-lg font-bold backdrop-blur-sm border ${
-                    gameState?.buzzerActive ? "bg-green-500/50 border-green-400/50 text-white animate-pulse" : "bg-gray-500/30 border-gray-400/30 text-gray-400"
-                  }`}>
-                    {gameState?.buzzerActive ? "BUZZER ACTIVE" : "BUZZER INACTIVE"}
-                  </div>
-                </div>
-
+                
                 {buzzerPosition !== null && (
-                  <div className="mb-6 p-4 bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 rounded-lg">
-                    <div className="text-xl font-bold text-yellow-400">
-                      You are #{buzzerPosition} in the buzzer queue!
-                    </div>
+                  <div className="px-4 py-2 bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 rounded-full">
+                    <span className="text-sm font-bold text-yellow-400">
+                      You are #{buzzerPosition} in queue!
+                    </span>
                   </div>
                 )}
+              </div>
 
-                <button
-                  onClick={buzz}
-                  disabled={!gameState?.buzzerActive || hasBuzzed}
-                  className={`w-full h-48 rounded-2xl text-4xl font-bold transition-all transform backdrop-blur-sm border ${
-                    gameState?.buzzerActive && !hasBuzzed
-                      ? "bg-red-600/60 border-red-400/50 text-white hover:scale-105 active:scale-95 shadow-2xl cursor-pointer hover:bg-red-500/70"
-                      : "bg-gray-600/30 border-gray-500/30 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  {hasBuzzed ? (
-                    <div>
-                      <Bell className="inline-block h-16 w-16 mb-2" />
-                      <div>BUZZED!</div>
+              {/* Buzz Button */}
+              <button
+                onClick={buzz}
+                disabled={!gameState?.buzzerActive || hasBuzzed}
+                className={`px-8 py-3 rounded-xl text-xl font-bold transition-all backdrop-blur-sm border ${
+                  gameState?.buzzerActive && !hasBuzzed
+                    ? "bg-red-600/60 border-red-400/50 text-white hover:bg-red-500/70 shadow-xl cursor-pointer"
+                    : "bg-gray-600/30 border-gray-500/30 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                {hasBuzzed ? "✓ BUZZED!" : <><Bell className="inline-block h-5 w-5 mr-2" />BUZZ IN</>}
+              </button>
+
+              {/* Spacebar Hint */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
+                <Keyboard className="h-4 w-4 text-blue-400" />
+                <span className="text-xs font-semibold">Press SPACEBAR</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Main Content Grid: Score (Left) | Board (Center) | Players (Right) */}
+        <div className="grid grid-cols-12 gap-3 h-[calc(100vh-180px)]">
+          {/* Left Column: Your Score & Position */}
+          <div className="col-span-1 space-y-3 flex flex-col">
+            <Card className="bg-gradient-to-br from-blue-600/40 to-purple-600/40 border border-blue-400/30 backdrop-blur-xl flex-1 flex flex-col justify-center">
+              <CardContent className="p-3">
+                <div className="text-center space-y-4">
+                  <Trophy className="h-8 w-8 text-yellow-400 mx-auto" />
+                  <div>
+                    <div className="text-[10px] opacity-80 uppercase tracking-wide">Score</div>
+                    <div className="text-3xl font-bold">${currentPlayer?.score || 0}</div>
+                  </div>
+                  <div className="pt-2 border-t border-white/20">
+                    <div className="text-[10px] opacity-80 uppercase tracking-wide">Rank</div>
+                    <div className="text-2xl font-bold text-yellow-400">
+                      #{gameState?.players
+                        .sort((a, b) => b.score - a.score)
+                        .findIndex(p => p.id === playerId) + 1 || "?"}
                     </div>
-                  ) : (
-                    <div>
-                      <Bell className="inline-block h-16 w-16 mb-2" />
-                      <div>BUZZ IN</div>
-                    </div>
-                  )}
-                </button>
-                
-                {/* Enhanced Spacebar Hint */}
-                <div className="mt-6 flex items-center justify-center gap-3">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg">
-                    <Keyboard className="h-5 w-5 text-blue-400" />
-                    <span className="text-sm font-semibold">Press SPACEBAR to buzz</span>
                   </div>
                 </div>
-                
-                {/* Tab Focus Reminder */}
-                <div className="mt-3 text-xs text-gray-500 bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded px-3 py-2 inline-block">
-                  💡 Make sure this window is focused for spacebar to work
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+              </CardContent>
+            </Card>
 
-        {/* Game Board (Read-only) */}
-        {gameState?.categories && gameState.categories.length > 0 && (
-          <div className="mb-8">
-            <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
-              <CardHeader>
-                <CardTitle className="text-center">Game Board</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-2">
-                  {/* Category Headers */}
-                  <div className="grid grid-cols-5 gap-2">
-                    {gameState.categories.map((category) => (
-                      <div key={category.id} className="bg-blue-600/30 backdrop-blur-sm border border-blue-400/30 p-3 text-center rounded-lg">
-                        <h2 className="text-sm md:text-base font-bold uppercase truncate">{category.name}</h2>
+            {/* Tab Focus Reminder */}
+            <div className="text-[9px] text-center text-gray-500 bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded p-1.5 leading-tight">
+              💡 Keep focused
+            </div>
+          </div>
+
+          {/* Center Column: Game Board */}
+          <div className="col-span-9">
+            {gameState?.categories && gameState.categories.length > 0 && (
+              <Card className="border border-white/20 bg-black/20 backdrop-blur-xl h-full flex flex-col">
+                <CardHeader className="pb-2 flex-shrink-0">
+                  <CardTitle className="text-center text-lg">Game Board</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 flex items-center justify-center">
+                  <div className="grid gap-2 w-full">
+                    {/* Category Headers */}
+                    <div className="grid grid-cols-5 gap-2">
+                      {gameState.categories.map((category) => (
+                        <div key={category.id} className="bg-blue-600/30 backdrop-blur-sm border border-blue-400/30 p-3 text-center rounded">
+                          <h2 className="text-sm font-bold uppercase truncate">{category.name}</h2>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Question Grid */}
+                    {[0, 1, 2, 3, 4].map((rowIndex) => (
+                      <div key={rowIndex} className="grid grid-cols-5 gap-2">
+                        {gameState.categories.map((category) => {
+                          const question = category.questions[rowIndex];
+                          return (
+                            <div
+                              key={question.id}
+                              className={`aspect-video flex items-center justify-center text-3xl font-bold rounded text-center backdrop-blur-sm ${
+                                question.answered
+                                  ? "bg-gray-800/30 border border-gray-600/20 text-gray-600"
+                                  : "bg-blue-600/40 border border-blue-400/30 text-yellow-400"
+                              }`}
+                            >
+                              {question.answered ? "" : `$${question.value}`}
+                            </div>
+                          );
+                        })}
                       </div>
                     ))}
                   </div>
-                  
-                  {/* Question Grid */}
-                  {[0, 1, 2, 3, 4].map((rowIndex) => (
-                    <div key={rowIndex} className="grid grid-cols-5 gap-2">
-                      {gameState.categories.map((category) => {
-                        const question = category.questions[rowIndex];
-                        return (
-                          <div
-                            key={question.id}
-                            className={`p-4 md:p-6 text-xl md:text-2xl font-bold rounded-lg text-center backdrop-blur-sm ${
-                              question.answered
-                                ? "bg-gray-800/30 border border-gray-600/20 text-gray-600"
-                                : "bg-blue-600/40 border border-blue-400/30 text-yellow-400"
-                            }`}
-                          >
-                            {question.answered ? "" : `$${question.value}`}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Column: All Players Scoreboard */}
+          <div className="col-span-2">
+            <Card className="border border-white/20 bg-black/20 backdrop-blur-xl h-full flex flex-col">
+              <CardHeader className="pb-2 flex-shrink-0">
+                <CardTitle className="flex items-center text-sm">
+                  <Users className="mr-1 h-3 w-3" />
+                  Scoreboard
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto">
+                <div className="space-y-2">
+                  {gameState?.players
+                    .sort((a, b) => b.score - a.score)
+                    .map((player, index) => (
+                      <div 
+                        key={player.id}
+                        className={`p-2 rounded-lg backdrop-blur-sm ${
+                          player.id === playerId 
+                            ? "bg-blue-500/30 border-2 border-blue-400/50" 
+                            : "bg-white/10 border border-white/20"
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className={`text-base font-bold ${
+                              index === 0 ? "text-yellow-400" : 
+                              index === 1 ? "text-gray-300" : 
+                              index === 2 ? "text-orange-400" : "text-gray-500"
+                            }`}>
+                              #{index + 1}
+                            </div>
+                            <div className="text-base font-bold">
+                              ${player.score}
+                            </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                  ))}
+                          <div className="font-semibold text-xs truncate">
+                            {player.name}
+                            {player.id === playerId && (
+                              <span className="ml-1 text-[10px] text-blue-400">(You)</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </CardContent>
             </Card>
           </div>
-        )}
-
-        {/* Other Players */}
-        <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="mr-2 h-5 w-5" />
-              All Players
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {gameState?.players
-                .sort((a, b) => b.score - a.score)
-                .map((player, index) => (
-                  <div 
-                    key={player.id}
-                    className={`flex items-center justify-between p-4 rounded-lg backdrop-blur-sm ${
-                      player.id === playerId ? "bg-blue-500/30 border-2 border-blue-400/50" : "bg-white/10 border border-white/20"
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="text-2xl font-bold text-gray-400">#{index + 1}</div>
-                      <div>
-                        <div className="font-semibold text-lg">
-                          {player.name}
-                          {player.id === playerId && (
-                            <span className="ml-2 text-sm text-blue-400">(You)</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-2xl font-bold">
-                      ${player.score}
-                    </div>
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
+        </div>
       </div>
 
       {/* Full-Screen Current Question Modal */}

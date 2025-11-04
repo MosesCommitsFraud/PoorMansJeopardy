@@ -109,14 +109,35 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     if (question && !question.answered) {
       setSelectedQuestion(question);
       setShowAnswer(false);
+      // Don't show to players yet - host needs to click "Show to Players"
+    }
+  };
+
+  const showToPlayers = async () => {
+    if (selectedQuestion) {
       await updateGameState({ 
-        currentQuestion: question,
+        currentQuestion: selectedQuestion,
         buzzerQueue: []
       });
     }
   };
 
+  const dismissQuestion = async () => {
+    // Close without marking as answered
+    if (selectedQuestion && gameState) {
+      await updateGameState({
+        currentQuestion: null,
+        buzzerActive: false,
+        buzzerQueue: []
+      });
+      
+      setSelectedQuestion(null);
+      setShowAnswer(false);
+    }
+  };
+
   const closeQuestion = async () => {
+    // Close AND mark as answered
     if (selectedQuestion && gameState) {
       const updatedCategories = gameState.categories.map(cat => ({
         ...cat,
@@ -324,7 +345,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       </div>
 
       {/* Question Dialog */}
-      <Dialog open={!!selectedQuestion} onOpenChange={() => closeQuestion()}>
+      <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && dismissQuestion()}>
         <DialogContent className="max-w-3xl border border-white/20 bg-black/30 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle>Question - ${selectedQuestion?.value}</DialogTitle>
@@ -342,13 +363,23 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               </div>
             )}
             
-            <div className="flex gap-2">
-              <Button onClick={() => setShowAnswer(!showAnswer)} variant="secondary" className="flex-1">
-                {showAnswer ? "Hide Answer" : "Show Answer"}
-              </Button>
-              <Button onClick={closeQuestion} className="flex-1">
-                Close & Mark Answered
-              </Button>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Button onClick={showToPlayers} className="flex-1" variant={gameState?.currentQuestion?.id === selectedQuestion?.id ? "secondary" : "default"}>
+                  {gameState?.currentQuestion?.id === selectedQuestion?.id ? "✓ Shown to Players" : "📺 Show to Players"}
+                </Button>
+                <Button onClick={() => setShowAnswer(!showAnswer)} variant="outline" className="flex-1">
+                  {showAnswer ? "Hide Answer" : "Show Answer"}
+                </Button>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={dismissQuestion} variant="outline" className="flex-1">
+                  Close (Keep Open)
+                </Button>
+                <Button onClick={closeQuestion} variant="destructive" className="flex-1">
+                  Close & Mark Answered
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
