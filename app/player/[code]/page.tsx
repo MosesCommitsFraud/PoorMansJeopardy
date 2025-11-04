@@ -4,7 +4,16 @@ import { useState, useEffect, use } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell, Trophy, Users, LogOut, AlertCircle } from "lucide-react";
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent, 
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import { GameState } from "@/types/game";
 
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
@@ -318,19 +327,17 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
       <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <AlertCircle className="h-6 w-6 text-orange-600" />
-              <AlertDialogTitle>Confirm Leave</AlertDialogTitle>
-            </div>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-orange-600" />
+              Confirm Leave
+            </AlertDialogTitle>
             <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button onClick={() => setShowConfirm(false)} variant="outline" className="w-full sm:w-auto">
-              Cancel
-            </Button>
-            <Button onClick={confirmLeaveGame} variant="destructive" className="w-full sm:w-auto">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLeaveGame} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Leave Game
-            </Button>
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -339,16 +346,14 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
       <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <div className="flex items-center gap-3 mb-2">
-              <AlertCircle className="h-6 w-6 text-blue-600" />
-              <AlertDialogTitle>Notice</AlertDialogTitle>
-            </div>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-blue-600" />
+              Notice
+            </AlertDialogTitle>
             <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <Button onClick={handleAlertClose} className="w-full sm:w-auto">
-              OK
-            </Button>
+            <AlertDialogAction onClick={handleAlertClose}>OK</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
