@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Jeopardy Game",
+  title: "Poor Man's Jeopardy",
   description: "Interactive Jeopardy game with host and player views",
 };
 

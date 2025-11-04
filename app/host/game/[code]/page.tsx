@@ -18,10 +18,12 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
   useEffect(() => {
     loadGameState();
+    // Reduced polling to save Vercel function invocations
+    // Only polls when buzzer is active or question is open
     const interval = setInterval(() => {
       loadGameState();
       loadBuzzerState();
-    }, 1000);
+    }, 3000); // Every 3 seconds instead of 1
     return () => clearInterval(interval);
   }, []);
 
@@ -125,7 +127,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">JEOPARDY!</h1>
+          <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
           <p className="text-blue-200">Host View - Lobby: <span className="font-mono font-bold text-yellow-300">{resolvedParams.code}</span></p>
         </div>
 

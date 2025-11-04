@@ -8,7 +8,7 @@ export default function Home() {
     <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         <div className="text-center mb-12">
-          <h1 className="text-7xl font-bold text-white mb-4 tracking-wider drop-shadow-2xl">JEOPARDY!</h1>
+          <h1 className="text-7xl font-bold text-white mb-4 tracking-wider drop-shadow-2xl">POOR MAN&apos;S JEOPARDY</h1>
           <p className="text-2xl text-blue-200 mb-2">Interactive Game Show Experience</p>
           <p className="text-lg text-blue-300">Play with friends using lobby codes</p>
         </div>

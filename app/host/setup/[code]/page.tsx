@@ -163,7 +163,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Game Setup</h1>
+            <h1 className="text-4xl font-bold text-white mb-2">Poor Man&apos;s Jeopardy - Setup</h1>
             <p className="text-blue-200">Lobby Code: <span className="font-mono font-bold text-yellow-300">{resolvedParams.code}</span></p>
           </div>
           <div className="flex gap-4">

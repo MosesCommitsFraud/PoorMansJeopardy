@@ -27,10 +27,11 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   useEffect(() => {
     if (playerId) {
       loadGameState();
+      // Reduced polling to save Vercel function invocations on free tier
       const interval = setInterval(() => {
         loadGameState();
         checkBuzzerStatus();
-      }, 1000);
+      }, 3000); // Every 3 seconds instead of 1
       return () => clearInterval(interval);
     }
   }, [playerId]);
@@ -95,7 +96,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">JEOPARDY!</h1>
+          <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
           <p className="text-blue-200 text-xl">Player: {playerName}</p>
           <p className="text-blue-300 text-sm font-mono">Lobby: {resolvedParams.code}</p>
         </div>

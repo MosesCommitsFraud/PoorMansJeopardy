@@ -18,9 +18,14 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     const hostId = localStorage.getItem("jeopardy_host_id");
     loadLobby(hostId);
     
-    const interval = setInterval(() => loadLobby(hostId), 2000);
+    // Only poll while in lobby (stops when game starts)
+    const interval = setInterval(() => {
+      if (!lobby?.gameState?.gameStarted) {
+        loadLobby(hostId);
+      }
+    }, 5000); // Reduced to every 5 seconds to save Vercel function calls
     return () => clearInterval(interval);
-  }, []);
+  }, [lobby?.gameState?.gameStarted]);
 
   const loadLobby = async (hostId: string | null) => {
     try {
@@ -117,7 +122,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-4 tracking-wider">JEOPARDY!</h1>
+          <h1 className="text-5xl font-bold text-white mb-4 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
           <p className="text-xl text-blue-200">
             {isHost ? "Host Lobby" : "Player Lobby"}
           </p>
