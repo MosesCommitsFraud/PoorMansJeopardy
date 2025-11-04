@@ -4,7 +4,8 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle } from "lucide-react";
+import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle, AlertCircle } from "lucide-react";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 
 export default function LobbyRoom({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -14,6 +15,10 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [currentVersion, setCurrentVersion] = useState(0);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     const hostId = localStorage.getItem("jeopardy_host_id");
@@ -50,15 +55,8 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
         
         // Only show alert and redirect if this was a valid lobby they were in
         if (storedLobbyCode === resolvedParams.code) {
-          alert("This lobby is no longer available.");
-          
-          // Clear all lobby-related storage
-          localStorage.removeItem("jeopardy_player_id");
-          localStorage.removeItem("jeopardy_player_name");
-          localStorage.removeItem("jeopardy_lobby_code");
-          localStorage.removeItem("jeopardy_host_id");
-          
-          router.push("/");
+          setAlertMessage("This lobby is no longer available.");
+          setShowAlert(true);
         } else {
           // Different lobby, just show error
           setError("Lobby not found");
@@ -110,7 +108,8 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
   const startGame = async () => {
     if (!lobby?.gameState?.categories?.length) {
-      alert("Please set up the game first!");
+      setAlertMessage("Please set up the game first!");
+      setShowAlert(true);
       return;
     }
 
@@ -124,44 +123,74 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
       router.push(`/host/game/${resolvedParams.code}`);
     } catch (error) {
-      alert("Failed to start game");
+      setAlertMessage("Failed to start game");
+      setShowAlert(true);
     }
   };
 
-  const leaveLobby = async () => {
-    const hostId = localStorage.getItem("jeopardy_host_id");
-    const playerId = localStorage.getItem("jeopardy_player_id");
-    
-    const confirmMessage = isHost 
+  const leaveLobby = () => {
+    const message = isHost 
       ? "Are you sure you want to close the lobby? This will end the game for all players."
       : "Are you sure you want to leave this lobby?";
     
-    if (!confirm(confirmMessage)) return;
+    setAlertMessage(message);
+    setConfirmAction(() => async () => {
+      const hostId = localStorage.getItem("jeopardy_host_id");
+      const playerId = localStorage.getItem("jeopardy_player_id");
+      
+      try {
+        await fetch(`/api/lobby/${resolvedParams.code}/leave`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            playerId: isHost ? hostId : playerId,
+            isHost 
+          }),
+        });
 
-    try {
-      await fetch(`/api/lobby/${resolvedParams.code}/leave`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          playerId: isHost ? hostId : playerId,
-          isHost 
-        }),
-      });
+        // Clear local storage
+        if (isHost) {
+          localStorage.removeItem("jeopardy_host_id");
+          localStorage.removeItem("jeopardy_lobby_code");
+        } else {
+          localStorage.removeItem("jeopardy_player_id");
+          localStorage.removeItem("jeopardy_player_name");
+          localStorage.removeItem("jeopardy_lobby_code");
+        }
 
-      // Clear local storage
-      if (isHost) {
-        localStorage.removeItem("jeopardy_host_id");
-        localStorage.removeItem("jeopardy_lobby_code");
-      } else {
-        localStorage.removeItem("jeopardy_player_id");
-        localStorage.removeItem("jeopardy_player_name");
-        localStorage.removeItem("jeopardy_lobby_code");
+        router.push("/");
+      } catch (error) {
+        setAlertMessage("Failed to leave lobby");
+        setShowAlert(true);
       }
+    });
+    setShowConfirm(true);
+  };
 
+  const handleAlertClose = () => {
+    setShowAlert(false);
+    
+    // If lobby was closed, redirect to home
+    if (alertMessage.includes("no longer available")) {
+      localStorage.removeItem("jeopardy_player_id");
+      localStorage.removeItem("jeopardy_player_name");
+      localStorage.removeItem("jeopardy_lobby_code");
+      localStorage.removeItem("jeopardy_host_id");
       router.push("/");
-    } catch (error) {
-      alert("Failed to leave lobby");
     }
+  };
+
+  const handleConfirm = () => {
+    setShowConfirm(false);
+    if (confirmAction) {
+      confirmAction();
+      setConfirmAction(null);
+    }
+  };
+
+  const handleConfirmCancel = () => {
+    setShowConfirm(false);
+    setConfirmAction(null);
   };
 
   if (error) {
@@ -326,6 +355,45 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
           </Card>
         )}
       </div>
+
+      {/* Alert Dialog */}
+      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <AlertCircle className="h-6 w-6 text-blue-600" />
+              <AlertDialogTitle>Notice</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button onClick={handleAlertClose} className="w-full sm:w-auto">
+              OK
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm Dialog */}
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <AlertCircle className="h-6 w-6 text-orange-600" />
+              <AlertDialogTitle>Confirm Action</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button onClick={handleConfirmCancel} variant="outline" className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button onClick={handleConfirm} variant="destructive" className="w-full sm:w-auto">
+              Confirm
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

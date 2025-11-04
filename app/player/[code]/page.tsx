@@ -3,7 +3,8 @@
 import { useState, useEffect, use } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Trophy, Users, LogOut } from "lucide-react";
+import { Bell, Trophy, Users, LogOut, AlertCircle } from "lucide-react";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter } from "@/components/ui/alert-dialog";
 import { GameState } from "@/types/game";
 
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
@@ -14,6 +15,9 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const [hasBuzzed, setHasBuzzed] = useState(false);
   const [buzzerPosition, setBuzzerPosition] = useState<number | null>(null);
   const [currentVersion, setCurrentVersion] = useState(0);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
 
   useEffect(() => {
     const savedPlayerId = localStorage.getItem("jeopardy_player_id");
@@ -53,11 +57,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     
     // If lobby not found (404), host probably closed it
     if (response.status === 404) {
-      alert("The lobby has been closed by the host.");
-      localStorage.removeItem("jeopardy_player_id");
-      localStorage.removeItem("jeopardy_player_name");
-      localStorage.removeItem("jeopardy_lobby_code");
-      router.push("/");
+      setAlertMessage("The lobby has been closed by the host.");
+      setShowAlert(true);
       return;
     }
     
@@ -119,9 +120,14 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [gameState?.buzzerActive, hasBuzzed]);
 
-  const leaveGame = async () => {
-    if (!confirm("Are you sure you want to leave the game?")) return;
+  const leaveGame = () => {
+    setAlertMessage("Are you sure you want to leave the game?");
+    setShowConfirm(true);
+  };
 
+  const confirmLeaveGame = async () => {
+    setShowConfirm(false);
+    
     try {
       await fetch(`/api/lobby/${resolvedParams.code}/leave`, {
         method: "POST",
@@ -134,7 +140,20 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
       localStorage.removeItem("jeopardy_lobby_code");
       router.push("/");
     } catch (error) {
-      alert("Failed to leave game");
+      setAlertMessage("Failed to leave game");
+      setShowAlert(true);
+    }
+  };
+
+  const handleAlertClose = () => {
+    setShowAlert(false);
+    
+    // If lobby was closed, redirect to home
+    if (alertMessage.includes("closed by the host")) {
+      localStorage.removeItem("jeopardy_player_id");
+      localStorage.removeItem("jeopardy_player_name");
+      localStorage.removeItem("jeopardy_lobby_code");
+      router.push("/");
     }
   };
 
@@ -294,6 +313,45 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
           </CardContent>
         </Card>
       </div>
+
+      {/* Confirm Dialog */}
+      <AlertDialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <AlertCircle className="h-6 w-6 text-orange-600" />
+              <AlertDialogTitle>Confirm Leave</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button onClick={() => setShowConfirm(false)} variant="outline" className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button onClick={confirmLeaveGame} variant="destructive" className="w-full sm:w-auto">
+              Leave Game
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Alert Dialog */}
+      <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <AlertCircle className="h-6 w-6 text-blue-600" />
+              <AlertDialogTitle>Notice</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button onClick={handleAlertClose} className="w-full sm:w-auto">
+              OK
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
