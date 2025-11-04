@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +28,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
-  const [lastBuzzerCount, setLastBuzzerCount] = useState(0);
+  const lastBuzzerCountRef = useRef(0);
 
   useEffect(() => {
     loadGameState();
@@ -81,14 +81,18 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   // Detect when a new player buzzes in
   useEffect(() => {
     const currentBuzzerCount = gameState?.buzzerQueue?.length || 0;
+    const previousCount = lastBuzzerCountRef.current;
     
-    if (currentBuzzerCount > lastBuzzerCount && lastBuzzerCount > 0) {
+    if (currentBuzzerCount > previousCount) {
       // Someone just buzzed in! Play sound
-      playBuzzerSound();
+      // Only play if game has started (prevents sound on initial load)
+      if (previousCount > 0 || gameState?.gameStarted) {
+        playBuzzerSound();
+      }
     }
     
-    setLastBuzzerCount(currentBuzzerCount);
-  }, [gameState?.buzzerQueue?.length]);
+    lastBuzzerCountRef.current = currentBuzzerCount;
+  }, [gameState?.buzzerQueue, gameState?.gameStarted]);
 
   const updateGameState = async (updates: Partial<GameState>) => {
     if (!gameState) return;

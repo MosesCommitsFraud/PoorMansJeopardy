@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +29,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const lastBuzzerCountRef = useRef(0);
+  const justBuzzedLocallyRef = useRef(false);
 
   useEffect(() => {
     const savedPlayerId = localStorage.getItem("jeopardy_player_id");
@@ -103,10 +105,30 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     }
   };
 
+  // Detect when ANY player buzzes in (including others)
+  useEffect(() => {
+    const currentBuzzerCount = gameState?.buzzerQueue?.length || 0;
+    const previousCount = lastBuzzerCountRef.current;
+    
+    if (currentBuzzerCount > previousCount && previousCount > 0) {
+      // Someone just buzzed in!
+      // Only play sound if it wasn't us (we already played it locally)
+      if (!justBuzzedLocallyRef.current) {
+        playBuzzerSound();
+      } else {
+        // Reset the flag after skipping our own buzz
+        justBuzzedLocallyRef.current = false;
+      }
+    }
+    
+    lastBuzzerCountRef.current = currentBuzzerCount;
+  }, [gameState?.buzzerQueue]);
+
   const buzz = async () => {
     if (gameState?.buzzerActive && !hasBuzzed) {
       // Play buzzer sound immediately for instant feedback
       playBuzzerSound();
+      justBuzzedLocallyRef.current = true; // Flag to prevent double-play
       
       try {
         const response = await fetch(`/api/lobby/${resolvedParams.code}/buzz`, {
@@ -122,9 +144,11 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         } else {
           const data = await response.json();
           console.error("Buzz error:", data.error);
+          justBuzzedLocallyRef.current = false; // Reset on error
         }
       } catch (error) {
         console.error("Buzz failed:", error);
+        justBuzzedLocallyRef.current = false; // Reset on error
       }
     }
   };
