@@ -53,12 +53,11 @@ export default function CreateLobby() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center p-4">
+    <main className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-4">
         <Button
           variant="ghost"
           onClick={() => router.push("/")}
-          className="text-white hover:text-white hover:bg-white/10"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Home

@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, Lock } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Users, Lock, ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function JoinLobby() {
   const router = useRouter();
@@ -96,84 +97,117 @@ export default function JoinLobby() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center">
-            <Users className="w-8 h-8 text-white" />
-          </div>
-          <CardTitle className="text-2xl">Join Lobby</CardTitle>
-          <CardDescription>Enter the lobby code to play</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-              {error}
+    <main className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-4">
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/")}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Home
+        </Button>
+
+        <Card className="shadow-2xl border-2">
+          <CardHeader className="text-center space-y-4 pb-4">
+            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <Users className="w-10 h-10 text-white" />
             </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="code">Lobby Code</Label>
-            <div className="flex gap-2">
-              <Input
-                id="code"
-                placeholder="XXXX"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                maxLength={4}
-                className="text-center text-2xl font-bold tracking-widest uppercase"
-              />
-              <Button onClick={() => checkLobby()} variant="outline">
-                Check
-              </Button>
+            
+            <div>
+              <CardTitle className="text-3xl font-bold mb-2">Join Lobby</CardTitle>
+              <CardDescription className="text-base">Enter a 4-character code to play</CardDescription>
             </div>
-          </div>
+          </CardHeader>
 
-          <div className="space-y-2">
-            <Label htmlFor="playerName">Your Name</Label>
-            <Input
-              id="playerName"
-              placeholder="Enter your name"
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              maxLength={20}
-            />
-          </div>
+          <Separator />
 
-          {showPassword && (
+          <CardContent className="space-y-6 pt-6">
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="password" className="flex items-center">
-                <Lock className="w-4 h-4 mr-2" />
-                Lobby Password
-              </Label>
+              <Label htmlFor="code" className="text-base font-semibold">Lobby Code</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="code"
+                  placeholder="XXXX"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  maxLength={4}
+                  className="text-center text-2xl font-bold tracking-widest uppercase font-mono"
+                />
+                <Button onClick={() => checkLobby()} variant="outline" size="lg">
+                  Check
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Enter the 4-character code from your host
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="playerName" className="text-base font-semibold">Your Name</Label>
               <Input
-                id="password"
-                type="password"
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                id="playerName"
+                placeholder="Enter your display name"
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                maxLength={20}
               />
             </div>
-          )}
 
-          <Button 
-            onClick={joinLobby} 
-            className="w-full" 
-            size="lg"
-            disabled={isJoining || !code || !playerName}
-          >
-            {isJoining ? "Joining..." : "Join Game"}
-          </Button>
+            {showPassword && (
+              <div className="space-y-2 p-4 border-l-4 border-primary bg-accent/30 rounded-r-lg">
+                <Label htmlFor="password" className="flex items-center text-base font-semibold">
+                  <Lock className="w-4 h-4 mr-2" />
+                  Lobby Password Required
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter the lobby password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="font-mono"
+                />
+              </div>
+            )}
 
-          <Button 
-            onClick={() => router.push("/")} 
-            variant="outline" 
-            className="w-full"
-          >
-            Back
-          </Button>
-        </CardContent>
-      </Card>
+            <div className="space-y-3 pt-2">
+              <Button 
+                onClick={joinLobby} 
+                className="w-full h-12 text-base font-semibold" 
+                size="lg"
+                disabled={isJoining || !code || !playerName || (showPassword && !password)}
+              >
+                {isJoining ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Joining Lobby...
+                  </>
+                ) : (
+                  <>
+                    <Users className="w-5 h-5 mr-2" />
+                    Join Lobby
+                  </>
+                )}
+              </Button>
+
+              {(!code || !playerName || (showPassword && !password)) && (
+                <p className="text-sm text-muted-foreground text-center">
+                  {!code && "Enter a lobby code"}
+                  {code && !playerName && "Enter your name"}
+                  {code && playerName && showPassword && !password && "Enter the lobby password"}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 }

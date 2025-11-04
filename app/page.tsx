@@ -1,97 +1,122 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Crown, Users, Sparkles } from "lucide-react";
+import { Crown, Users } from "lucide-react";
+import { DottedGlowBackground } from "@/components/ui/dotted-glow-background";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center p-4">
-      <div className="max-w-5xl w-full">
-        {/* Hero Section */}
-        <div className="text-center mb-16 space-y-6">
-          <Badge variant="secondary" className="text-sm font-medium px-4 py-1.5">
-            <Sparkles className="w-3 h-3 mr-1.5" />
-            Free • No Registration Required
-          </Badge>
-          
-          <h1 className="text-7xl md:text-8xl font-black text-white mb-4 tracking-tight drop-shadow-2xl">
-            POOR MAN&apos;S
+    <div className="relative min-h-screen flex items-center justify-center p-4">
+      <DottedGlowBackground
+        className="pointer-events-none absolute inset-0 opacity-30 dark:opacity-100"
+        opacity={1}
+        gap={16}
+        radius={2}
+        colorLightVar="--color-primary"
+        glowColorLightVar="--color-primary"
+        colorDarkVar="--color-primary"
+        glowColorDarkVar="--color-primary"
+        backgroundOpacity={0}
+        speedMin={0.3}
+        speedMax={1.2}
+        speedScale={1}
+      />
+
+      <main className="relative z-10 w-full max-w-5xl mx-auto">
+        <div className="text-center mb-12 space-y-4">
+          <h1 className="text-6xl md:text-7xl font-black tracking-tight">
+            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-purple-400 dark:to-blue-400">
+              POOR MAN'S
+            </span>
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500">
+            <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent dark:from-purple-400 dark:via-pink-400 dark:to-purple-400">
               JEOPARDY
             </span>
           </h1>
-          
-          <div className="space-y-2">
-            <p className="text-2xl text-blue-100 font-medium">Interactive Game Show Experience</p>
-            <p className="text-lg text-blue-300/80 max-w-2xl mx-auto">
-              Create lobbies, invite friends, and compete in trivia battles using simple lobby codes
-            </p>
-          </div>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Create custom trivia games and challenge your friends
+          </p>
         </div>
-        
-        {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-          <Card className="relative overflow-hidden border-2 hover:border-yellow-400 transition-all hover:shadow-2xl hover:scale-105 group">
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-            
-            <CardHeader className="text-center pb-4 relative">
-              <div className="mx-auto mb-6 w-24 h-24 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                <Crown className="w-12 h-12 text-white" />
-              </div>
-              
-              <CardTitle className="text-2xl font-bold mb-2">Host a Game</CardTitle>
-              <CardDescription className="text-base">
-                Create a custom lobby and set up your own trivia questions
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="relative">
-              <Link href="/lobby/create" className="block">
-                <Button className="w-full h-12 text-base font-semibold" size="lg">
-                  Create Lobby
+
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Host Card */}
+          <Link href="/lobby/create" className="group">
+            <Card className="h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border-2 hover:border-primary/50 bg-card/80 backdrop-blur-sm">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <Crown className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl mb-2">Host a Game</CardTitle>
+                <CardDescription className="text-base">
+                  Create and manage your own trivia session
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>Custom questions and categories</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>Control game flow and scoring</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>Optional password protection</span>
+                  </div>
+                </div>
+                <Button className="w-full mt-4" size="lg">
+                  <Crown className="w-4 h-4 mr-2" />
+                  Start Hosting
                 </Button>
-              </Link>
-              <p className="text-xs text-muted-foreground text-center mt-3">
-                Get a 4-character code to share
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="relative overflow-hidden border-2 hover:border-purple-400 transition-all hover:shadow-2xl hover:scale-105 group">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-            
-            <CardHeader className="text-center pb-4 relative">
-              <div className="mx-auto mb-6 w-24 h-24 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
-                <Users className="w-12 h-12 text-white" />
-              </div>
-              
-              <CardTitle className="text-2xl font-bold mb-2">Join a Game</CardTitle>
-              <CardDescription className="text-base">
-                Enter a lobby code and compete against friends
-              </CardDescription>
-            </CardHeader>
-            
-            <CardContent className="relative">
-              <Link href="/lobby/join" className="block">
-                <Button className="w-full h-12 text-base font-semibold" size="lg" variant="secondary">
-                  Join Lobby
+              </CardContent>
+            </Card>
+          </Link>
+
+          {/* Player Card */}
+          <Link href="/lobby/join" className="group">
+            <Card className="h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border-2 hover:border-primary/50 bg-card/80 backdrop-blur-sm">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <Users className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl mb-2">Join a Game</CardTitle>
+                <CardDescription className="text-base">
+                  Enter a game code and start playing
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>Quick join with 4-char code</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>Real-time buzzer system</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>No registration needed</span>
+                  </div>
+                </div>
+                <Button className="w-full mt-4" size="lg" variant="secondary">
+                  <Users className="w-4 h-4 mr-2" />
+                  Join Now
                 </Button>
-              </Link>
-              <p className="text-xs text-muted-foreground text-center mt-3">
-                Have a code? Jump right in
-              </p>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-16 text-blue-300/60 text-sm">
-          <p>Built with Next.js, React, and Tailwind CSS</p>
+        <div className="text-center text-sm text-muted-foreground mt-8">
+          <p>Free to use • No registration • Active for 24 hours</p>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
-
