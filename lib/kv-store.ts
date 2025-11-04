@@ -30,7 +30,7 @@ export const kvStore = {
   async getLobby(code: string): Promise<Lobby | null> {
     if (kv) {
       try {
-        return await kv.get<Lobby>(`lobby:${code}`);
+        return (await kv.get(`lobby:${code}`)) as Lobby | null;
       } catch (error) {
         console.error("KV get error:", error);
         return null;

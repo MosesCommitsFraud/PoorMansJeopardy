@@ -9,9 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3 } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database } from "lucide-react";
 import { Category, Question, GameTemplate } from "@/types/game";
 import { templateStorage } from "@/lib/template-storage";
+import { CategoryBrowser } from "@/components/category-browser";
+import { generateCategoriesFromDataset } from "@/lib/questions-loader";
 
 export default function HostSetup({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -33,8 +35,10 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   const [templates, setTemplates] = useState<GameTemplate[]>([]);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showManageDialog, setShowManageDialog] = useState(false);
+  const [showCategoryBrowser, setShowCategoryBrowser] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     loadGameState();
@@ -244,6 +248,19 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     setShowSaveDialog(true);
   };
 
+  const handleGenerateFromDataset = async (selectedCategories: string[]) => {
+    setIsGenerating(true);
+    try {
+      const generatedCategories = await generateCategoriesFromDataset(selectedCategories);
+      setCategories(generatedCategories);
+    } catch (error) {
+      console.error('Error generating categories from dataset:', error);
+      alert('Failed to generate categories from dataset');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center">
@@ -298,6 +315,16 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
               </Button>
             )}
             
+            <Button 
+              onClick={() => setShowCategoryBrowser(true)} 
+              variant="outline" 
+              className="backdrop-blur-sm bg-green-500/10 hover:bg-green-500/20 border-green-500/30"
+              disabled={isGenerating}
+            >
+              <Database className="mr-2 h-4 w-4" />
+              {isGenerating ? "Generating..." : "Browse Questions"}
+            </Button>
+
             <Button onClick={loadDefaultGame} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
               Load Default Game
             </Button>
@@ -410,6 +437,14 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Category Browser Dialog */}
+      <CategoryBrowser
+        open={showCategoryBrowser}
+        onOpenChange={setShowCategoryBrowser}
+        onSelectCategories={handleGenerateFromDataset}
+        maxSelection={6}
+      />
 
       {/* Manage Templates Dialog */}
       <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>

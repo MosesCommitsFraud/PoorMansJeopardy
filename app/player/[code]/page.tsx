@@ -282,9 +282,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                   <div className="pt-2 border-t border-white/20">
                     <div className="text-[10px] opacity-80 uppercase tracking-wide">Rank</div>
                     <div className="text-2xl font-bold text-yellow-400">
-                      #{gameState?.players
-                        .sort((a, b) => b.score - a.score)
-                        .findIndex(p => p.id === playerId) + 1 || "?"}
+                      #{(gameState?.players
+                        ? gameState.players.sort((a, b) => b.score - a.score)
+                        .findIndex(p => p.id === playerId) + 1 
+                        : 0) || "?"}
                     </div>
                   </div>
                 </div>
