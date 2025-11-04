@@ -395,12 +395,30 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
             <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 p-6 rounded-lg">
               <div className="text-sm font-semibold text-blue-300 mb-2">QUESTION:</div>
               <div className="text-2xl font-bold">{selectedQuestion?.question}</div>
+              {selectedQuestion?.questionImageUrl && (
+                <div className="mt-4">
+                  <img 
+                    src={selectedQuestion.questionImageUrl} 
+                    alt="Question" 
+                    className="max-w-full max-h-64 rounded-lg mx-auto"
+                  />
+                </div>
+              )}
             </div>
             
             {showAnswer && (
               <div className="bg-green-500/20 backdrop-blur-sm border border-green-400/30 p-6 rounded-lg">
                 <div className="text-sm font-semibold text-green-300 mb-2">ANSWER:</div>
                 <div className="text-2xl font-bold">{selectedQuestion?.answer}</div>
+                {selectedQuestion?.answerImageUrl && (
+                  <div className="mt-4">
+                    <img 
+                      src={selectedQuestion.answerImageUrl} 
+                      alt="Answer" 
+                      className="max-w-full max-h-64 rounded-lg mx-auto"
+                    />
+                  </div>
+                )}
               </div>
             )}
             

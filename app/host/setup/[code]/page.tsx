@@ -9,11 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, ImagePlus, Film, X } from "lucide-react";
 import { Category, Question, GameTemplate } from "@/types/game";
 import { templateStorage } from "@/lib/template-storage";
 import { CategoryBrowser } from "@/components/category-browser";
 import { generateCategoriesFromDataset } from "@/lib/questions-loader";
+import { GifPicker } from "@/components/gif-picker";
 
 export default function HostSetup({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -39,6 +40,19 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   const [templateName, setTemplateName] = useState("");
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showGifPicker, setShowGifPicker] = useState(false);
+  const [gifPickerTarget, setGifPickerTarget] = useState<{
+    categoryId: string;
+    questionId: string;
+    type: 'question' | 'answer';
+  } | null>(null);
+  const [showImageUrlDialog, setShowImageUrlDialog] = useState(false);
+  const [imageUrlInput, setImageUrlInput] = useState("");
+  const [imageUrlTarget, setImageUrlTarget] = useState<{
+    categoryId: string;
+    questionId: string;
+    type: 'question' | 'answer';
+  } | null>(null);
 
   useEffect(() => {
     loadGameState();
@@ -116,16 +130,18 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       }
 
       for (const question of category.questions) {
-        if (!question.question.trim()) {
+        // Question must have either text OR an image/GIF
+        if (!question.question.trim() && !question.questionImageUrl) {
           return { 
             isValid: false, 
-            message: `Category "${category.name}" has empty questions. Please fill in all questions.` 
+            message: `Category "${category.name}" has a question with no text or image. Please add text or an image/GIF.` 
           };
         }
-        if (!question.answer.trim()) {
+        // Answer must have either text OR an image/GIF
+        if (!question.answer.trim() && !question.answerImageUrl) {
           return { 
             isValid: false, 
-            message: `Category "${category.name}" has empty answers. Please fill in all answers.` 
+            message: `Category "${category.name}" has an answer with no text or image. Please add text or an image/GIF.` 
           };
         }
       }
@@ -261,6 +277,40 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     }
   };
 
+  const openGifPicker = (categoryId: string, questionId: string, type: 'question' | 'answer') => {
+    setGifPickerTarget({ categoryId, questionId, type });
+    setShowGifPicker(true);
+  };
+
+  const handleSelectGif = (gifUrl: string) => {
+    if (gifPickerTarget) {
+      const field = gifPickerTarget.type === 'question' ? 'questionImageUrl' : 'answerImageUrl';
+      updateQuestion(gifPickerTarget.categoryId, gifPickerTarget.questionId, field, gifUrl);
+      setGifPickerTarget(null);
+    }
+  };
+
+  const openImageUrlDialog = (categoryId: string, questionId: string, type: 'question' | 'answer') => {
+    setImageUrlTarget({ categoryId, questionId, type });
+    setImageUrlInput("");
+    setShowImageUrlDialog(true);
+  };
+
+  const handleSetImageUrl = () => {
+    if (imageUrlTarget && imageUrlInput.trim()) {
+      const field = imageUrlTarget.type === 'question' ? 'questionImageUrl' : 'answerImageUrl';
+      updateQuestion(imageUrlTarget.categoryId, imageUrlTarget.questionId, field, imageUrlInput.trim());
+      setImageUrlTarget(null);
+      setImageUrlInput("");
+      setShowImageUrlDialog(false);
+    }
+  };
+
+  const removeImage = (categoryId: string, questionId: string, type: 'question' | 'answer') => {
+    const field = type === 'question' ? 'questionImageUrl' : 'answerImageUrl';
+    updateQuestion(categoryId, questionId, field, '');
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center">
@@ -380,6 +430,44 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                           placeholder="Enter question..."
                           className="min-h-[80px]"
                         />
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openGifPicker(category.id, question.id, 'question')}
+                          >
+                            <Film className="h-4 w-4 mr-1" />
+                            GIF
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openImageUrlDialog(category.id, question.id, 'question')}
+                          >
+                            <ImagePlus className="h-4 w-4 mr-1" />
+                            Image
+                          </Button>
+                        </div>
+                        {question.questionImageUrl && (
+                          <div className="mt-2 relative border rounded overflow-hidden">
+                            <img 
+                              src={question.questionImageUrl} 
+                              alt="Question" 
+                              className="w-full max-h-32 object-contain bg-black/20"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              className="absolute top-2 right-2"
+                              onClick={() => removeImage(category.id, question.id, 'question')}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                       <div className="col-span-6">
                         <Label className="text-sm">Answer</Label>
@@ -389,6 +477,44 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                           placeholder="Enter answer..."
                           className="min-h-[80px]"
                         />
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openGifPicker(category.id, question.id, 'answer')}
+                          >
+                            <Film className="h-4 w-4 mr-1" />
+                            GIF
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openImageUrlDialog(category.id, question.id, 'answer')}
+                          >
+                            <ImagePlus className="h-4 w-4 mr-1" />
+                            Image
+                          </Button>
+                        </div>
+                        {question.answerImageUrl && (
+                          <div className="mt-2 relative border rounded overflow-hidden">
+                            <img 
+                              src={question.answerImageUrl} 
+                              alt="Answer" 
+                              className="w-full max-h-32 object-contain bg-black/20"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              className="absolute top-2 right-2"
+                              onClick={() => removeImage(category.id, question.id, 'answer')}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -445,6 +571,63 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
         onSelectCategories={handleGenerateFromDataset}
         maxSelection={6}
       />
+
+      {/* GIF Picker Dialog */}
+      <GifPicker
+        open={showGifPicker}
+        onOpenChange={setShowGifPicker}
+        onSelectGif={handleSelectGif}
+        title={gifPickerTarget?.type === 'question' ? 'Add GIF to Question' : 'Add GIF to Answer'}
+      />
+
+      {/* Image URL Dialog */}
+      <Dialog open={showImageUrlDialog} onOpenChange={setShowImageUrlDialog}>
+        <DialogContent className="border border-white/20 bg-black/40 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle>
+              {imageUrlTarget?.type === 'question' ? 'Add Image to Question' : 'Add Image to Answer'}
+            </DialogTitle>
+            <DialogDescription>
+              Enter the URL of an image to add
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="image-url">Image URL</Label>
+              <Input
+                id="image-url"
+                value={imageUrlInput}
+                onChange={(e) => setImageUrlInput(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSetImageUrl();
+                }}
+                autoFocus
+              />
+            </div>
+            {imageUrlInput && (
+              <div className="border rounded overflow-hidden">
+                <img 
+                  src={imageUrlInput} 
+                  alt="Preview" 
+                  className="w-full max-h-48 object-contain bg-black/20"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowImageUrlDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSetImageUrl} disabled={!imageUrlInput.trim()}>
+              Add Image
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Manage Templates Dialog */}
       <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>

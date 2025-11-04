@@ -403,6 +403,15 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
             <div className="text-5xl md:text-6xl font-bold leading-tight px-8">
               {gameState?.currentQuestion?.question}
             </div>
+            {gameState?.currentQuestion?.questionImageUrl && (
+              <div className="mt-8">
+                <img 
+                  src={gameState.currentQuestion.questionImageUrl} 
+                  alt="Question" 
+                  className="max-w-full max-h-96 rounded-lg mx-auto"
+                />
+              </div>
+            )}
             
             {/* Show Answer if host enabled it */}
             {gameState?.showAnswerToPlayers && (
@@ -411,6 +420,15 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 <div className="text-4xl md:text-5xl font-bold text-green-300">
                   {gameState?.currentQuestion?.answer}
                 </div>
+                {gameState?.currentQuestion?.answerImageUrl && (
+                  <div className="mt-8">
+                    <img 
+                      src={gameState.currentQuestion.answerImageUrl} 
+                      alt="Answer" 
+                      className="max-w-full max-h-96 rounded-lg mx-auto"
+                    />
+                  </div>
+                )}
               </div>
             )}
             

@@ -4,6 +4,8 @@ export interface Question {
   answer: string;
   value: number;
   answered: boolean;
+  questionImageUrl?: string; // URL to image or GIF for the question
+  answerImageUrl?: string;   // URL to image or GIF for the answer
 }
 
 export interface Category {
