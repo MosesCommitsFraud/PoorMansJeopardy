@@ -1,32 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { kvStore } from "@/lib/kv-store";
-import { Lobby } from "@/types/game";
-
-// Test handler to verify route exists
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
-) {
-  const { code } = await params;
-  return NextResponse.json({ message: "Name route exists", code });
-}
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
-    const { code } = await params;
-    console.log("Name update request for lobby:", code);
+    const { code: rawCode } = await params;
+    const code = rawCode.toUpperCase();
     
     const { lobbyName, hostId } = await request.json();
-    console.log("Lobby name:", lobbyName, "Host ID:", hostId);
 
     const lobby = await kvStore.getLobby(code);
-    console.log("Found lobby:", lobby ? "yes" : "no");
 
     if (!lobby) {
-      console.log("Lobby not found for code:", code);
       return NextResponse.json({ error: "Lobby not found" }, { status: 404 });
     }
 
@@ -40,7 +27,7 @@ export async function POST(
     lobby.version += 1;
     lobby.lastModified = Date.now();
 
-    await kvStore.setLobby(code, lobby, 86400); // 24 hours
+    await kvStore.setLobby(code, lobby, 86400);
 
     return NextResponse.json({ success: true, lobbyName: lobby.lobbyName });
   } catch (error) {

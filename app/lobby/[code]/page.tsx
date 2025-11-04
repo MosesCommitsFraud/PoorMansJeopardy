@@ -149,25 +149,16 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
       const hostId = localStorage.getItem("jeopardy_host_id");
       const trimmedName = lobbyName.trim();
       
-      console.log("Updating lobby name for code:", resolvedParams.code);
-      console.log("New name:", trimmedName, "Host ID:", hostId);
-      
       const response = await fetch(`/api/lobby/${resolvedParams.code}/name`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lobbyName: trimmedName, hostId }),
       });
 
-      console.log("Response status:", response.status);
-      const data = await response.json();
-      console.log("Response data:", data);
-
       if (response.ok) {
         setEditingName(false);
         // Reload lobby to get updated data
         loadLobby(hostId);
-      } else {
-        console.error("Failed to update name:", data);
       }
     } catch (error) {
       console.error("Error updating lobby name:", error);

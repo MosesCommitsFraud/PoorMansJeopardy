@@ -36,13 +36,7 @@ export const kvStore = {
         return null;
       }
     }
-    const key = `lobby:${code}`;
-    const lobby = localStore.get(key) || null;
-    console.log(`[kvStore] getLobby(${code}) - Key: ${key}, Found: ${!!lobby}, Store size: ${localStore.size}`);
-    if (!lobby && localStore.size > 0) {
-      console.log(`[kvStore] Available keys:`, Array.from(localStore.keys()));
-    }
-    return lobby;
+    return localStore.get(`lobby:${code}`) || null;
   },
 
   async setLobby(code: string, lobby: Lobby, ttl: number = 86400): Promise<void> {
@@ -53,9 +47,7 @@ export const kvStore = {
         console.error("KV set error:", error);
       }
     } else {
-      const key = `lobby:${code}`;
-      localStore.set(key, lobby);
-      console.log(`[kvStore] setLobby(${code}) - Key: ${key}, Store size: ${localStore.size}`);
+      localStore.set(`lobby:${code}`, lobby);
     }
   },
 
