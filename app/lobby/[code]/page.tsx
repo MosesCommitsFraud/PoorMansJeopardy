@@ -204,10 +204,10 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center p-4">
+      <main className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
-            <p className="text-red-500 text-lg mb-4">{error}</p>
+            <p className="text-destructive text-lg mb-4">{error}</p>
             <Button onClick={() => router.push("/")}>Back to Home</Button>
           </CardContent>
         </Card>
@@ -217,7 +217,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
   if (!lobby) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center p-4">
+      <main className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card>
           <CardContent className="p-8">
             <p className="text-lg">Loading lobby...</p>
@@ -230,11 +230,13 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const playerName = localStorage.getItem("jeopardy_player_name");
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-8">
+    <main className="min-h-screen bg-background p-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-4 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
-          <p className="text-xl text-blue-200">
+          <h1 className="text-5xl font-bold mb-4 tracking-wider bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-purple-400 dark:to-blue-400">
+            POOR MAN&apos;S JEOPARDY
+          </h1>
+          <p className="text-xl text-muted-foreground">
             {isHost ? "Host Lobby" : "Player Lobby"}
           </p>
         </div>
@@ -269,18 +271,22 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
           </CardHeader>
           <CardContent>
             {lobby.gameState.players.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">Waiting for players to join...</p>
+              <p className="text-muted-foreground text-center py-8">Waiting for players to join...</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {lobby.gameState.players.map((player: any) => (
                   <div 
                     key={player.id}
-                    className={`p-4 rounded-lg flex items-center ${
-                      player.name === playerName ? "bg-blue-100 border-2 border-blue-500" : "bg-gray-100"
+                    className={`p-4 rounded-lg flex items-center border-2 transition-colors ${
+                      player.name === playerName 
+                        ? "bg-primary/10 border-primary dark:bg-primary/20" 
+                        : "bg-muted/50 border-border hover:bg-muted"
                     }`}
                   >
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                      player.id === lobby.hostId ? "bg-yellow-500" : "bg-blue-500"
+                      player.id === lobby.hostId 
+                        ? "bg-gradient-to-br from-yellow-400 to-yellow-600" 
+                        : "bg-gradient-to-br from-blue-500 to-purple-600"
                     }`}>
                       {player.id === lobby.hostId ? (
                         <Crown className="w-5 h-5 text-white" />
@@ -288,14 +294,14 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
                         <Users className="w-5 h-5 text-white" />
                       )}
                     </div>
-                    <div>
-                      <div className="font-semibold">
+                    <div className="flex-1">
+                      <div className="font-semibold text-foreground flex items-center gap-2">
                         {player.name}
                         {player.name === playerName && (
-                          <span className="ml-2 text-xs text-blue-600">(You)</span>
+                          <span className="text-xs text-primary font-normal">(You)</span>
                         )}
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-muted-foreground">
                         {player.id === lobby.hostId ? "Host" : "Player"}
                       </div>
                     </div>
@@ -313,13 +319,13 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
               <CardTitle>Host Controls</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-700 mb-2">
+              <div className="bg-muted/50 p-4 rounded-lg border">
+                <p className="text-sm text-foreground mb-2">
                   <strong>Setup:</strong> {lobby.gameState.categories.length > 0 
                     ? `${lobby.gameState.categories.length} categories configured`
                     : "No categories configured"}
                 </p>
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-foreground">
                   <strong>Players:</strong> {lobby.gameState.players.length} joined
                 </p>
               </div>
@@ -353,7 +359,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
             <CardContent className="p-8 text-center">
               <div className="text-6xl mb-4">⏳</div>
               <h3 className="text-xl font-semibold mb-2">Waiting for host...</h3>
-              <p className="text-gray-600 mb-6">
+              <p className="text-muted-foreground mb-6">
                 The host will start the game when ready. Share the lobby code with your friends!
               </p>
               <Button onClick={leaveLobby} variant="outline" className="mx-auto">

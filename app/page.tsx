@@ -4,27 +4,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Crown, Users } from "lucide-react";
-import { DottedGlowBackground } from "@/components/ui/dotted-glow-background";
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4">
-      <DottedGlowBackground
-        className="pointer-events-none absolute inset-0 opacity-30 dark:opacity-100"
-        opacity={1}
-        gap={16}
-        radius={2}
-        colorLightVar="--color-primary"
-        glowColorLightVar="--color-primary"
-        colorDarkVar="--color-primary"
-        glowColorDarkVar="--color-primary"
-        backgroundOpacity={0}
-        speedMin={0.3}
-        speedMax={1.2}
-        speedScale={1}
-      />
-
-      <main className="relative z-10 w-full max-w-5xl mx-auto">
+    <main className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-5xl mx-auto">
         <div className="text-center mb-12 space-y-4">
           <h1 className="text-6xl md:text-7xl font-black tracking-tight">
             <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-purple-400 dark:to-blue-400">
@@ -116,7 +100,7 @@ export default function Home() {
         <div className="text-center text-sm text-muted-foreground mt-8">
           <p>Free to use • No registration • Active for 24 hours</p>
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
