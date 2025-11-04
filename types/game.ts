@@ -47,3 +47,11 @@ export interface Lobby {
   lastModified: number; // Timestamp of last change
 }
 
+export interface GameTemplate {
+  id: string;
+  name: string;
+  categories: Category[];
+  createdAt: number;
+  lastModified: number;
+}
+

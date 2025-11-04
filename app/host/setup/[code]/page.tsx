@@ -7,8 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
-import { Category, Question } from "@/types/game";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3 } from "lucide-react";
+import { Category, Question, GameTemplate } from "@/types/game";
+import { templateStorage } from "@/lib/template-storage";
 
 export default function HostSetup({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -27,10 +30,20 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     },
   ]);
   const [isLoading, setIsLoading] = useState(true);
+  const [templates, setTemplates] = useState<GameTemplate[]>([]);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showManageDialog, setShowManageDialog] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
     loadGameState();
+    loadTemplates();
   }, []);
+
+  const loadTemplates = () => {
+    setTemplates(templateStorage.getAll());
+  };
 
   const loadGameState = async () => {
     try {
@@ -88,6 +101,35 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     }));
   };
 
+  const validateCategories = (): { isValid: boolean; message: string } => {
+    if (categories.length === 0) {
+      return { isValid: false, message: "Please add at least one category" };
+    }
+
+    for (const category of categories) {
+      if (!category.name.trim()) {
+        return { isValid: false, message: "All categories must have a name" };
+      }
+
+      for (const question of category.questions) {
+        if (!question.question.trim()) {
+          return { 
+            isValid: false, 
+            message: `Category "${category.name}" has empty questions. Please fill in all questions.` 
+          };
+        }
+        if (!question.answer.trim()) {
+          return { 
+            isValid: false, 
+            message: `Category "${category.name}" has empty answers. Please fill in all answers.` 
+          };
+        }
+      }
+    }
+
+    return { isValid: true, message: "" };
+  };
+
   const loadDefaultGame = async () => {
     const defaultCategories: Category[] = [
       {
@@ -128,6 +170,12 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   };
 
   const saveGame = async () => {
+    const validation = validateCategories();
+    if (!validation.isValid) {
+      alert(validation.message);
+      return;
+    }
+
     try {
       const response = await fetch(`/api/lobby/${resolvedParams.code}/state`);
       const gameState = await response.json();
@@ -144,6 +192,56 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     } catch (error) {
       alert("Failed to save game");
     }
+  };
+
+  const openSaveTemplateDialog = () => {
+    setTemplateName("");
+    setEditingTemplateId(null);
+    setShowSaveDialog(true);
+  };
+
+  const saveAsTemplate = () => {
+    if (!templateName.trim()) {
+      alert("Please enter a template name");
+      return;
+    }
+
+    if (templateStorage.nameExists(templateName.trim(), editingTemplateId || undefined)) {
+      alert("A template with this name already exists");
+      return;
+    }
+
+    const validation = validateCategories();
+    if (!validation.isValid) {
+      alert(validation.message);
+      return;
+    }
+
+    templateStorage.save(templateName.trim(), categories, editingTemplateId || undefined);
+    loadTemplates();
+    setShowSaveDialog(false);
+    setTemplateName("");
+  };
+
+  const loadTemplate = (templateId: string) => {
+    const template = templateStorage.getById(templateId);
+    if (template) {
+      // Deep clone to avoid reference issues
+      setCategories(JSON.parse(JSON.stringify(template.categories)));
+    }
+  };
+
+  const deleteTemplate = (templateId: string) => {
+    if (confirm("Are you sure you want to delete this template?")) {
+      templateStorage.delete(templateId);
+      loadTemplates();
+    }
+  };
+
+  const startRenameTemplate = (template: GameTemplate) => {
+    setTemplateName(template.name);
+    setEditingTemplateId(template.id);
+    setShowSaveDialog(true);
   };
 
   if (isLoading) {
@@ -166,21 +264,52 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">Poor Man&apos;s Jeopardy - Setup</h1>
             <p className="text-gray-300">Lobby Code: <span className="font-mono font-bold text-yellow-400">{resolvedParams.code}</span></p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-3 flex-wrap">
             <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Lobby
             </Button>
+            
+            {/* Template Actions */}
+            {templates.length > 0 && (
+              <Select onValueChange={loadTemplate}>
+                <SelectTrigger className="w-[200px] backdrop-blur-sm bg-white/5 border-white/10">
+                  <SelectValue placeholder="Load Template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map(template => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            
+            <Button onClick={openSaveTemplateDialog} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
+              <BookTemplate className="mr-2 h-4 w-4" />
+              Save as Template
+            </Button>
+            
+            {templates.length > 0 && (
+              <Button onClick={() => setShowManageDialog(true)} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Manage Templates
+              </Button>
+            )}
+            
             <Button onClick={loadDefaultGame} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
               Load Default Game
             </Button>
+            
             <Button onClick={addCategory} variant="secondary" className="backdrop-blur-sm">
               <Plus className="mr-2 h-4 w-4" />
               Add Category
             </Button>
+            
             <Button onClick={saveGame}>
               <Save className="mr-2 h-4 w-4" />
-              Save
+              Save & Continue
             </Button>
           </div>
         </div>
@@ -242,6 +371,112 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
           ))}
         </div>
       </div>
+
+      {/* Save Template Dialog */}
+      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+        <DialogContent className="border border-white/20 bg-black/40 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTemplateId ? "Rename Template" : "Save as Template"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingTemplateId 
+                ? "Enter a new name for this template" 
+                : "Give your game configuration a name to reuse it later"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="template-name">Template Name</Label>
+              <Input
+                id="template-name"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="e.g., History Quiz, Science Trivia..."
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveAsTemplate();
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveAsTemplate}>
+              {editingTemplateId ? "Rename" : "Save Template"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Templates Dialog */}
+      <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>
+        <DialogContent className="border border-white/20 bg-black/40 backdrop-blur-xl max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Manage Templates</DialogTitle>
+            <DialogDescription>
+              Your saved game templates ({templates.length} total)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto py-4">
+            {templates.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No templates saved yet. Create one by clicking &quot;Save as Template&quot;
+              </p>
+            ) : (
+              templates.map((template) => (
+                <Card key={template.id} className="border border-white/10 bg-white/5 backdrop-blur-sm">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-lg">{template.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {template.categories.length} {template.categories.length === 1 ? "category" : "categories"} • 
+                          Created {new Date(template.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            loadTemplate(template.id);
+                            setShowManageDialog(false);
+                          }}
+                        >
+                          Load
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setShowManageDialog(false);
+                            startRenameTemplate(template);
+                          }}
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => deleteTemplate(template.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowManageDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
