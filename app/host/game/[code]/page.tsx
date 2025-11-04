@@ -1,32 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Bell, BellOff, Users, Trophy, Plus, Minus } from "lucide-react";
-import { GameState, Question, Player } from "@/types/game";
+import { Bell, BellOff, Trophy, Plus, Minus } from "lucide-react";
+import { GameState, Question } from "@/types/game";
 
-export default function HostGame() {
+export default function HostGame({ params }: { params: Promise<{ code: string }> }) {
+  const resolvedParams = use(params);
+  const router = useRouter();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
   const [buzzerQueue, setBuzzerQueue] = useState<any[]>([]);
-  const [newPlayerName, setNewPlayerName] = useState("");
-  const [showAddPlayer, setShowAddPlayer] = useState(false);
 
   useEffect(() => {
     loadGameState();
     const interval = setInterval(() => {
       loadGameState();
       loadBuzzerState();
-    }, 500);
+    }, 1000);
     return () => clearInterval(interval);
   }, []);
 
   const loadGameState = async () => {
-    const response = await fetch("/api/game/state");
+    const response = await fetch(`/api/lobby/${resolvedParams.code}/state`);
     const data = await response.json();
     setGameState(data);
     if (data.currentQuestion) {
@@ -35,9 +35,19 @@ export default function HostGame() {
   };
 
   const loadBuzzerState = async () => {
-    const response = await fetch("/api/game/buzzer");
-    const data = await response.json();
-    setBuzzerQueue(data.buzzerQueue || []);
+    setBuzzerQueue(gameState?.buzzerQueue || []);
+  };
+
+  const updateGameState = async (updates: Partial<GameState>) => {
+    if (!gameState) return;
+    
+    const newState = { ...gameState, ...updates };
+    await fetch(`/api/lobby/${resolvedParams.code}/state`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gameState: newState }),
+    });
+    setGameState(newState);
   };
 
   const selectQuestion = async (categoryId: string, questionId: string) => {
@@ -47,80 +57,55 @@ export default function HostGame() {
     if (question && !question.answered) {
       setSelectedQuestion(question);
       setShowAnswer(false);
-      await fetch("/api/game/question", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "select", categoryId, questionId }),
+      await updateGameState({ 
+        currentQuestion: question,
+        buzzerQueue: []
       });
     }
   };
 
   const closeQuestion = async () => {
-    if (selectedQuestion) {
-      await fetch("/api/game/question", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: "mark_answered", 
-          categoryId: gameState?.categories.find(c => c.questions.some(q => q.id === selectedQuestion.id))?.id,
-          questionId: selectedQuestion.id 
-        }),
+    if (selectedQuestion && gameState) {
+      const updatedCategories = gameState.categories.map(cat => ({
+        ...cat,
+        questions: cat.questions.map(q => 
+          q.id === selectedQuestion.id ? { ...q, answered: true } : q
+        )
+      }));
+      
+      await updateGameState({
+        categories: updatedCategories,
+        currentQuestion: null,
+        buzzerActive: false,
+        buzzerQueue: []
       });
+      
+      setSelectedQuestion(null);
+      setShowAnswer(false);
     }
-    setSelectedQuestion(null);
-    setShowAnswer(false);
-    await deactivateBuzzer();
   };
 
-  const activateBuzzer = async () => {
-    await fetch("/api/game/buzzer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "activate" }),
-    });
+  const activateBuzzer = () => {
+    updateGameState({ buzzerActive: true, buzzerQueue: [] });
   };
 
-  const deactivateBuzzer = async () => {
-    await fetch("/api/game/buzzer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "deactivate" }),
-    });
+  const deactivateBuzzer = () => {
+    updateGameState({ buzzerActive: false });
   };
 
-  const clearBuzzer = async () => {
-    await fetch("/api/game/buzzer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "clear" }),
-    });
+  const clearBuzzer = () => {
+    updateGameState({ buzzerQueue: [] });
     setBuzzerQueue([]);
   };
 
   const updatePlayerScore = async (playerId: string, points: number) => {
-    await fetch("/api/game/player", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "update_score", playerId, points }),
-    });
-    loadGameState();
-  };
-
-  const addPlayer = async () => {
-    if (newPlayerName.trim()) {
-      await fetch("/api/game/player", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: "add", 
-          playerId: Date.now().toString(), 
-          playerName: newPlayerName 
-        }),
-      });
-      setNewPlayerName("");
-      setShowAddPlayer(false);
-      loadGameState();
-    }
+    if (!gameState) return;
+    
+    const updatedPlayers = gameState.players.map(p =>
+      p.id === playerId ? { ...p, score: p.score + points } : p
+    );
+    
+    await updateGameState({ players: updatedPlayers });
   };
 
   if (!gameState) {
@@ -141,23 +126,14 @@ export default function HostGame() {
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">JEOPARDY!</h1>
-          <p className="text-blue-200">Host View - Answers Visible</p>
+          <p className="text-blue-200">Host View - Lobby: <span className="font-mono font-bold text-yellow-300">{resolvedParams.code}</span></p>
         </div>
 
         {/* Players and Scores */}
         <div className="mb-6">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center">
-                  <Users className="mr-2 h-5 w-5" />
-                  Players & Scores
-                </CardTitle>
-                <Button onClick={() => setShowAddPlayer(true)} size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Player
-                </Button>
-              </div>
+              <CardTitle>Players & Scores</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -169,18 +145,10 @@ export default function HostGame() {
                     </div>
                     <div className="font-semibold text-gray-700">{player.name}</div>
                     <div className="flex gap-2 mt-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => updatePlayerScore(player.id, 100)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, 100)}>
                         <Plus className="h-3 w-3" />
                       </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => updatePlayerScore(player.id, -100)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, -100)}>
                         <Minus className="h-3 w-3" />
                       </Button>
                     </div>
@@ -197,7 +165,7 @@ export default function HostGame() {
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                  <div className="text-lg font-semibold">Buzzer Status:</div>
+                  <div className="text-lg font-semibold">Buzzer:</div>
                   <div className={`px-4 py-2 rounded-full font-bold ${
                     gameState.buzzerActive ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"
                   }`}>
@@ -205,7 +173,7 @@ export default function HostGame() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={activateBuzzer} variant="default">
+                  <Button onClick={activateBuzzer}>
                     <Bell className="mr-2 h-4 w-4" />
                     Activate
                   </Button>
@@ -214,13 +182,13 @@ export default function HostGame() {
                     Deactivate
                   </Button>
                   <Button onClick={clearBuzzer} variant="outline">
-                    Clear Queue
+                    Clear
                   </Button>
                 </div>
               </div>
               {buzzerQueue.length > 0 && (
                 <div className="mt-4 p-4 bg-yellow-100 rounded-lg">
-                  <div className="font-bold mb-2">Buzzer Queue (in order):</div>
+                  <div className="font-bold mb-2">Buzzer Queue:</div>
                   <div className="space-y-2">
                     {buzzerQueue.map((buzz, index) => (
                       <div key={index} className="flex items-center gap-2">
@@ -284,7 +252,7 @@ export default function HostGame() {
             </div>
             
             {showAnswer && (
-              <div className="bg-green-100 p-6 rounded-lg animate-in fade-in">
+              <div className="bg-green-100 p-6 rounded-lg">
                 <div className="text-sm font-semibold text-gray-600 mb-2">ANSWER:</div>
                 <div className="text-2xl font-bold text-green-900">{selectedQuestion?.answer}</div>
               </div>
@@ -298,24 +266,6 @@ export default function HostGame() {
                 Close & Mark Answered
               </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Player Dialog */}
-      <Dialog open={showAddPlayer} onOpenChange={setShowAddPlayer}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Player</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="Player name"
-              value={newPlayerName}
-              onChange={(e) => setNewPlayerName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addPlayer()}
-            />
-            <Button onClick={addPlayer} className="w-full">Add Player</Button>
           </div>
         </DialogContent>
       </Dialog>

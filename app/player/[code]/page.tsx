@@ -1,58 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Bell, Trophy, Users } from "lucide-react";
-import { GameState, Player } from "@/types/game";
+import { GameState } from "@/types/game";
 
-export default function PlayerView() {
+export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
+  const resolvedParams = use(params);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerId, setPlayerId] = useState<string>("");
   const [playerName, setPlayerName] = useState<string>("");
-  const [isJoined, setIsJoined] = useState(false);
-  const [buzzerActive, setBuzzerActive] = useState(false);
   const [hasBuzzed, setHasBuzzed] = useState(false);
   const [buzzerPosition, setBuzzerPosition] = useState<number | null>(null);
 
   useEffect(() => {
-    // Check if player info is in localStorage
     const savedPlayerId = localStorage.getItem("jeopardy_player_id");
     const savedPlayerName = localStorage.getItem("jeopardy_player_name");
     
     if (savedPlayerId && savedPlayerName) {
       setPlayerId(savedPlayerId);
       setPlayerName(savedPlayerName);
-      setIsJoined(true);
     }
   }, []);
 
   useEffect(() => {
-    if (isJoined) {
+    if (playerId) {
       loadGameState();
       const interval = setInterval(() => {
         loadGameState();
         checkBuzzerStatus();
-      }, 500);
+      }, 1000);
       return () => clearInterval(interval);
     }
-  }, [isJoined]);
+  }, [playerId]);
 
   const loadGameState = async () => {
-    const response = await fetch("/api/game/state");
+    const response = await fetch(`/api/lobby/${resolvedParams.code}/state`);
     const data = await response.json();
     setGameState(data);
   };
 
   const checkBuzzerStatus = async () => {
-    const response = await fetch("/api/game/buzzer");
-    const data = await response.json();
-    setBuzzerActive(data.buzzerActive);
+    if (!gameState) return;
     
-    // Check if this player is in the queue
-    const position = data.buzzerQueue?.findIndex((b: any) => b.playerId === playerId);
+    const position = gameState.buzzerQueue?.findIndex((b: any) => b.playerId === playerId);
     if (position !== -1 && position !== undefined) {
       setBuzzerPosition(position + 1);
       setHasBuzzed(true);
@@ -62,38 +54,22 @@ export default function PlayerView() {
     }
   };
 
-  const joinGame = async () => {
-    if (playerName.trim()) {
-      const newPlayerId = Date.now().toString();
-      
-      await fetch("/api/game/player", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          action: "add", 
-          playerId: newPlayerId, 
-          playerName: playerName 
-        }),
-      });
-      
-      setPlayerId(newPlayerId);
-      localStorage.setItem("jeopardy_player_id", newPlayerId);
-      localStorage.setItem("jeopardy_player_name", playerName);
-      setIsJoined(true);
-    }
-  };
-
   const buzz = async () => {
-    if (buzzerActive && !hasBuzzed) {
-      await fetch("/api/game/buzzer", {
+    if (gameState?.buzzerActive && !hasBuzzed) {
+      const updatedQueue = [...(gameState.buzzerQueue || []), {
+        playerId,
+        playerName,
+        timestamp: Date.now(),
+      }];
+      
+      await fetch(`/api/lobby/${resolvedParams.code}/state`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          action: "buzz", 
-          playerId, 
-          playerName 
+          gameState: { ...gameState, buzzerQueue: updatedQueue }
         }),
       });
+      
       setHasBuzzed(true);
       checkBuzzerStatus();
     }
@@ -102,7 +78,7 @@ export default function PlayerView() {
   // Handle keyboard buzzer (spacebar)
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === "Space" && isJoined && buzzerActive && !hasBuzzed) {
+      if (e.code === "Space" && gameState?.buzzerActive && !hasBuzzed) {
         e.preventDefault();
         buzz();
       }
@@ -110,33 +86,7 @@ export default function PlayerView() {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isJoined, buzzerActive, hasBuzzed]);
-
-  if (!isJoined) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center text-2xl">Join Jeopardy Game</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Input
-                placeholder="Enter your name"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && joinGame()}
-                className="text-lg"
-              />
-            </div>
-            <Button onClick={joinGame} className="w-full" size="lg">
-              Join Game
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  }, [gameState?.buzzerActive, hasBuzzed]);
 
   const currentPlayer = gameState?.players.find(p => p.id === playerId);
 
@@ -147,6 +97,7 @@ export default function PlayerView() {
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">JEOPARDY!</h1>
           <p className="text-blue-200 text-xl">Player: {playerName}</p>
+          <p className="text-blue-300 text-sm font-mono">Lobby: {resolvedParams.code}</p>
         </div>
 
         {/* Player Score */}
@@ -202,9 +153,9 @@ export default function PlayerView() {
               <div className="text-center">
                 <div className="mb-6">
                   <div className={`inline-block px-6 py-3 rounded-full text-lg font-bold ${
-                    buzzerActive ? "bg-green-500 text-white animate-pulse" : "bg-gray-300 text-gray-600"
+                    gameState?.buzzerActive ? "bg-green-500 text-white animate-pulse" : "bg-gray-300 text-gray-600"
                   }`}>
-                    {buzzerActive ? "BUZZER ACTIVE" : "BUZZER INACTIVE"}
+                    {gameState?.buzzerActive ? "BUZZER ACTIVE" : "BUZZER INACTIVE"}
                   </div>
                 </div>
 
@@ -218,9 +169,9 @@ export default function PlayerView() {
 
                 <button
                   onClick={buzz}
-                  disabled={!buzzerActive || hasBuzzed}
+                  disabled={!gameState?.buzzerActive || hasBuzzed}
                   className={`w-full h-48 rounded-2xl text-4xl font-bold transition-all transform ${
-                    buzzerActive && !hasBuzzed
+                    gameState?.buzzerActive && !hasBuzzed
                       ? "bg-gradient-to-br from-red-500 to-red-700 text-white hover:scale-105 active:scale-95 shadow-2xl cursor-pointer"
                       : "bg-gray-300 text-gray-500 cursor-not-allowed"
                   }`}
