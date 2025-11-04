@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, BellOff, Trophy, Plus, Minus } from "lucide-react";
+import { Bell, BellOff, Trophy, Plus, Minus, XCircle } from "lucide-react";
 import { GameState, Question } from "@/types/game";
 
 export default function HostGame({ params }: { params: Promise<{ code: string }> }) {
@@ -121,6 +121,27 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     await updateGameState({ players: updatedPlayers });
   };
 
+  const endGame = async () => {
+    if (!confirm("Are you sure you want to end the game? This will close the lobby for all players.")) {
+      return;
+    }
+
+    try {
+      const hostId = localStorage.getItem("jeopardy_host_id");
+      await fetch(`/api/lobby/${resolvedParams.code}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId: hostId, isHost: true }),
+      });
+
+      localStorage.removeItem("jeopardy_host_id");
+      localStorage.removeItem("jeopardy_lobby_code");
+      router.push("/");
+    } catch (error) {
+      alert("Failed to end game");
+    }
+  };
+
   if (!gameState) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center">
@@ -137,9 +158,17 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
-          <p className="text-blue-200">Host View - Lobby: <span className="font-mono font-bold text-yellow-300">{resolvedParams.code}</span></p>
+        <div className="mb-6">
+          <div className="flex justify-between items-center">
+            <div className="text-center flex-1">
+              <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
+              <p className="text-blue-200">Host View - Lobby: <span className="font-mono font-bold text-yellow-300">{resolvedParams.code}</span></p>
+            </div>
+            <Button onClick={endGame} variant="destructive" size="sm">
+              <XCircle className="mr-2 h-4 w-4" />
+              End Game
+            </Button>
+          </div>
         </div>
 
         {/* Players and Scores */}

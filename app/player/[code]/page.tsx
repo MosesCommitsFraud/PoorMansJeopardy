@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, Trophy, Users } from "lucide-react";
+import { Bell, Trophy, Users, LogOut } from "lucide-react";
 import { GameState } from "@/types/game";
 
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
@@ -50,6 +50,17 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
   const loadGameState = async () => {
     const response = await fetch(`/api/lobby/${resolvedParams.code}`);
+    
+    // If lobby not found (404), host probably closed it
+    if (response.status === 404) {
+      alert("The lobby has been closed by the host.");
+      localStorage.removeItem("jeopardy_player_id");
+      localStorage.removeItem("jeopardy_player_name");
+      localStorage.removeItem("jeopardy_lobby_code");
+      router.push("/");
+      return;
+    }
+    
     const data = await response.json();
     
     if (response.ok) {
@@ -108,16 +119,43 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [gameState?.buzzerActive, hasBuzzed]);
 
+  const leaveGame = async () => {
+    if (!confirm("Are you sure you want to leave the game?")) return;
+
+    try {
+      await fetch(`/api/lobby/${resolvedParams.code}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ playerId, isHost: false }),
+      });
+
+      localStorage.removeItem("jeopardy_player_id");
+      localStorage.removeItem("jeopardy_player_name");
+      localStorage.removeItem("jeopardy_lobby_code");
+      router.push("/");
+    } catch (error) {
+      alert("Failed to leave game");
+    }
+  };
+
   const currentPlayer = gameState?.players.find(p => p.id === playerId);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
-          <p className="text-blue-200 text-xl">Player: {playerName}</p>
-          <p className="text-blue-300 text-sm font-mono">Lobby: {resolvedParams.code}</p>
+        <div className="mb-8">
+          <div className="flex justify-between items-start">
+            <div className="text-center flex-1">
+              <h1 className="text-5xl font-bold text-white mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
+              <p className="text-blue-200 text-xl">Player: {playerName}</p>
+              <p className="text-blue-300 text-sm font-mono">Lobby: {resolvedParams.code}</p>
+            </div>
+            <Button onClick={leaveGame} variant="outline" size="sm">
+              <LogOut className="mr-2 h-4 w-4" />
+              Leave
+            </Button>
+          </div>
         </div>
 
         {/* Player Score */}

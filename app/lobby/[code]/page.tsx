@@ -4,7 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Crown, Users, Copy, Check, Settings, Play } from "lucide-react";
+import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle } from "lucide-react";
 
 export default function LobbyRoom({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -42,6 +42,19 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const loadLobby = async (hostId: string | null) => {
     try {
       const response = await fetch(`/api/lobby/${resolvedParams.code}`);
+      
+      // If lobby not found (404), it was probably closed
+      if (response.status === 404) {
+        if (!isHost) {
+          alert("The lobby has been closed by the host.");
+          localStorage.removeItem("jeopardy_player_id");
+          localStorage.removeItem("jeopardy_player_name");
+          localStorage.removeItem("jeopardy_lobby_code");
+          router.push("/");
+        }
+        return;
+      }
+      
       const data = await response.json();
 
       if (response.ok) {
@@ -101,6 +114,42 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
       router.push(`/host/game/${resolvedParams.code}`);
     } catch (error) {
       alert("Failed to start game");
+    }
+  };
+
+  const leaveLobby = async () => {
+    const hostId = localStorage.getItem("jeopardy_host_id");
+    const playerId = localStorage.getItem("jeopardy_player_id");
+    
+    const confirmMessage = isHost 
+      ? "Are you sure you want to close the lobby? This will end the game for all players."
+      : "Are you sure you want to leave this lobby?";
+    
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      await fetch(`/api/lobby/${resolvedParams.code}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          playerId: isHost ? hostId : playerId,
+          isHost 
+        }),
+      });
+
+      // Clear local storage
+      if (isHost) {
+        localStorage.removeItem("jeopardy_host_id");
+        localStorage.removeItem("jeopardy_lobby_code");
+      } else {
+        localStorage.removeItem("jeopardy_player_id");
+        localStorage.removeItem("jeopardy_player_name");
+        localStorage.removeItem("jeopardy_lobby_code");
+      }
+
+      router.push("/");
+    } catch (error) {
+      alert("Failed to leave lobby");
     }
   };
 
@@ -240,6 +289,11 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
                   Start Game
                 </Button>
               </div>
+
+              <Button onClick={leaveLobby} variant="destructive" className="w-full">
+                <XCircle className="mr-2 h-4 w-4" />
+                Close Lobby
+              </Button>
             </CardContent>
           </Card>
         )}
@@ -250,9 +304,13 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
             <CardContent className="p-8 text-center">
               <div className="text-6xl mb-4">⏳</div>
               <h3 className="text-xl font-semibold mb-2">Waiting for host...</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-6">
                 The host will start the game when ready. Share the lobby code with your friends!
               </p>
+              <Button onClick={leaveLobby} variant="outline" className="mx-auto">
+                <LogOut className="mr-2 h-4 w-4" />
+                Leave Lobby
+              </Button>
             </CardContent>
           </Card>
         )}
