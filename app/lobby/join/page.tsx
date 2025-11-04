@@ -74,7 +74,10 @@ export default function JoinLobby() {
       const data = await response.json();
 
       if (response.ok) {
-        // Store player credentials in localStorage
+        // Clear any old host data first
+        localStorage.removeItem("jeopardy_host_id");
+        
+        // Store NEW player credentials
         localStorage.setItem("jeopardy_player_id", data.playerId);
         localStorage.setItem("jeopardy_player_name", playerName);
         localStorage.setItem("jeopardy_lobby_code", data.code);

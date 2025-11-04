@@ -43,14 +43,25 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     try {
       const response = await fetch(`/api/lobby/${resolvedParams.code}`);
       
-      // If lobby not found (404), it was probably closed
+      // If lobby not found (404), it was probably closed or doesn't exist
       if (response.status === 404) {
-        if (!isHost) {
-          alert("The lobby has been closed by the host.");
+        // Check if this is a stale lobby code in storage
+        const storedLobbyCode = localStorage.getItem("jeopardy_lobby_code");
+        
+        // Only show alert and redirect if this was a valid lobby they were in
+        if (storedLobbyCode === resolvedParams.code) {
+          alert("This lobby is no longer available.");
+          
+          // Clear all lobby-related storage
           localStorage.removeItem("jeopardy_player_id");
           localStorage.removeItem("jeopardy_player_name");
           localStorage.removeItem("jeopardy_lobby_code");
+          localStorage.removeItem("jeopardy_host_id");
+          
           router.push("/");
+        } else {
+          // Different lobby, just show error
+          setError("Lobby not found");
         }
         return;
       }

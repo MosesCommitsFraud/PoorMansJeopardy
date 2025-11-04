@@ -29,7 +29,11 @@ export default function CreateLobby() {
       const data = await response.json();
 
       if (response.ok) {
-        // Store host credentials in localStorage
+        // Clear any old lobby data first
+        localStorage.removeItem("jeopardy_player_id");
+        localStorage.removeItem("jeopardy_player_name");
+        
+        // Store NEW host credentials
         localStorage.setItem("jeopardy_host_id", data.hostId);
         localStorage.setItem("jeopardy_lobby_code", data.code);
         
