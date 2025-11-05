@@ -12,9 +12,13 @@ export default function Home() {
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-5xl mx-auto">
         <div className="text-center mb-12 space-y-6">
-          {/* Logo placeholder - add your SVG here */}
-          <div className="h-[200px] flex items-center justify-center">
-            {/* Your SVG logo will go here */}
+          {/* PMJ Logo */}
+          <div className="flex items-center justify-center mb-8">
+            <img 
+              src="/PMJLogo.svg" 
+              alt="Poor Man's Jeopardy" 
+              className="w-full max-w-4xl h-auto"
+            />
           </div>
           
           {/* Shiny subtext in frosted glass chip */}
