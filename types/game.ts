@@ -37,6 +37,9 @@ export interface GameState {
   showAnswerToPlayers?: boolean;
   timerEndAt?: number | null; // Timestamp when timer should end (null/undefined = no active timer)
   timerDuration?: number; // Duration in seconds (default 30)
+  gameEnded?: boolean; // Whether the game has ended
+  endedAt?: number; // Timestamp when the game ended
+  winnerId?: string | null; // ID of the winner
 }
 
 export interface Lobby {

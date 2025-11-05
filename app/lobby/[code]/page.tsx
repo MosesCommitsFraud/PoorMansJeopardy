@@ -364,39 +364,46 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
               <p className="text-muted-foreground text-center py-8">Waiting for players to join...</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {lobby.gameState.players.map((player: any) => (
-                  <div 
-                    key={player.id}
-                    className={`p-4 rounded-lg flex items-center border-2 transition-colors ${
-                      player.name === playerName 
-                        ? "bg-primary/10 border-primary dark:bg-primary/20" 
-                        : "bg-muted/50 border-border hover:bg-muted"
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                      player.id === lobby.hostId 
-                        ? "bg-gradient-to-br from-yellow-400 to-yellow-600" 
-                        : "bg-gradient-to-br from-blue-500 to-purple-600"
-                    }`}>
-                      {player.id === lobby.hostId ? (
-                        <Crown className="w-5 h-5 text-white" />
-                      ) : (
-                        <Users className="w-5 h-5 text-white" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-foreground flex items-center gap-2">
-                        {player.name}
-                        {player.name === playerName && (
-                          <span className="text-xs text-primary font-normal">(You)</span>
+                {lobby.gameState.players.map((player: any) => {
+                  const isWinner = lobby.gameState.winnerId && player.id === lobby.gameState.winnerId;
+                  return (
+                    <div
+                      key={player.id}
+                      className={`p-4 rounded-lg flex items-center border-2 transition-colors ${
+                        player.name === playerName
+                          ? "bg-primary/10 border-primary dark:bg-primary/20"
+                          : "bg-muted/50 border-border hover:bg-muted"
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                        player.id === lobby.hostId
+                          ? "bg-gradient-to-br from-yellow-400 to-yellow-600"
+                          : "bg-gradient-to-br from-blue-500 to-purple-600"
+                      }`}>
+                        {player.id === lobby.hostId ? (
+                          <Crown className="w-5 h-5 text-white" />
+                        ) : (
+                          <Users className="w-5 h-5 text-white" />
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {player.id === lobby.hostId ? "Host" : "Player"}
+                      <div className="flex-1">
+                        <div className="font-semibold text-foreground flex items-center gap-2">
+                          {player.name}
+                          {isWinner && (
+                            <Crown className="w-4 h-4 text-yellow-500" title="Last Game Winner" />
+                          )}
+                          {player.name === playerName && (
+                            <span className="text-xs text-primary font-normal">(You)</span>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {player.id === lobby.hostId ? "Host" : "Player"}
+                          {isWinner && player.id !== lobby.hostId && " • Last Winner"}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>

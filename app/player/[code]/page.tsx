@@ -18,6 +18,7 @@ import {
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import { GameState } from "@/types/game";
+import { EndGameScreen } from "@/components/EndGameScreen";
 
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -70,21 +71,30 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
   const loadGameState = async () => {
     const response = await fetch(`/api/lobby/${resolvedParams.code}`);
-    
+
     // If lobby not found (404), host probably closed it
     if (response.status === 404) {
       setAlertMessage("The lobby has been closed by the host.");
       setShowAlert(true);
       return;
     }
-    
+
     const data = await response.json();
-    
+
     if (response.ok) {
-      setGameState(data.gameState);
+      const newGameState = data.gameState;
+
+      // Check if host returned to lobby (game was started but now isn't)
+      if (gameState?.gameStarted && !newGameState.gameStarted && !newGameState.gameEnded) {
+        // Host returned to lobby - redirect player back to lobby
+        router.push(`/lobby/${resolvedParams.code}`);
+        return;
+      }
+
+      setGameState(newGameState);
       setCurrentVersion(data.version || 0);
       setLobbyName(data.lobbyName || "");
-      checkBuzzerStatus(data.gameState);
+      checkBuzzerStatus(newGameState);
     }
   };
 
@@ -210,7 +220,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
   const handleAlertClose = () => {
     setShowAlert(false);
-    
+
     // If lobby was closed, redirect to home
     if (alertMessage.includes("closed by the host")) {
       localStorage.removeItem("jeopardy_player_id");
@@ -220,7 +230,24 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     }
   };
 
+  const returnToLobby = () => {
+    // Just navigate back to lobby - host will handle the state reset
+    router.push(`/lobby/${resolvedParams.code}`);
+  };
+
   const currentPlayer = gameState?.players.find(p => p.id === playerId);
+
+  // Show end game screen if game has ended
+  if (gameState?.gameEnded) {
+    return (
+      <EndGameScreen
+        players={gameState.players}
+        lobbyCode={resolvedParams.code}
+        isHost={false}
+        onReturnToLobby={returnToLobby}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen p-3">

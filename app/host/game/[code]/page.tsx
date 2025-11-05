@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, BellOff, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw } from "lucide-react";
+import { Bell, BellOff, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { 
@@ -19,6 +19,7 @@ import {
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import { GameState, Question } from "@/types/game";
+import { EndGameScreen } from "@/components/EndGameScreen";
 
 export default function HostGame({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -30,6 +31,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [confirmAction, setConfirmAction] = useState<"endGame" | "closeLobby" | null>(null);
   const lastBuzzerCountRef = useRef(0);
   const [lobbyName, setLobbyName] = useState("");
   const [timerDuration, setTimerDuration] = useState(30);
@@ -256,13 +258,55 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   };
 
   const endGame = () => {
-    setAlertMessage("Are you sure you want to end the game? This will close the lobby for all players.");
+    setAlertMessage("Are you sure you want to end the game? This will show the final scores and winner.");
+    setConfirmAction("endGame");
     setShowConfirm(true);
   };
 
-  const confirmEndGame = async () => {
+  const closeLobby = () => {
+    setAlertMessage("Are you sure you want to close the lobby? This will permanently close the game for all players.");
+    setConfirmAction("closeLobby");
+    setShowConfirm(true);
+  };
+
+  const handleConfirm = async () => {
     setShowConfirm(false);
-    
+
+    if (confirmAction === "endGame") {
+      await confirmEndGame();
+    } else if (confirmAction === "closeLobby") {
+      await confirmCloseLobby();
+    }
+
+    setConfirmAction(null);
+  };
+
+  const confirmEndGame = async () => {
+    if (!gameState) return;
+
+    try {
+      // Calculate winner (highest score among non-host players)
+      const nonHostPlayers = gameState.players.filter(p => !p.isHost);
+      const sortedPlayers = [...nonHostPlayers].sort((a, b) => b.score - a.score);
+      const winnerId = sortedPlayers.length > 0 && sortedPlayers[0].score > 0 ? sortedPlayers[0].id : null;
+
+      // Set game ended state with winner
+      await updateGameState({
+        gameEnded: true,
+        endedAt: Date.now(),
+        winnerId: winnerId,
+        currentQuestion: null,
+        buzzerActive: false,
+        showAnswerToPlayers: false,
+        timerEndAt: null
+      });
+    } catch (error) {
+      setAlertMessage("Failed to end game");
+      setShowAlert(true);
+    }
+  };
+
+  const confirmCloseLobby = async () => {
     try {
       const hostId = localStorage.getItem("jeopardy_host_id");
       await fetch(`/api/lobby/${resolvedParams.code}/leave`, {
@@ -275,20 +319,56 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       localStorage.removeItem("jeopardy_lobby_code");
       router.push("/");
     } catch (error) {
-      setAlertMessage("Failed to end game");
+      setAlertMessage("Failed to close lobby");
+      setShowAlert(true);
+    }
+  };
+
+  const returnToLobby = async () => {
+    if (!gameState) return;
+
+    try {
+      // Reset game state back to lobby
+      await updateGameState({
+        gameStarted: false,
+        gameEnded: false,
+        currentQuestion: null,
+        buzzerActive: false,
+        buzzerQueue: [],
+        showAnswerToPlayers: false,
+        timerEndAt: null
+      });
+
+      // Navigate back to lobby
+      router.push(`/lobby/${resolvedParams.code}`);
+    } catch (error) {
+      setAlertMessage("Failed to return to lobby");
       setShowAlert(true);
     }
   };
 
   if (!gameState) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Card>
           <CardContent className="p-8">
             <p className="text-lg">Loading game...</p>
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  // Show end game screen if game has ended
+  if (gameState.gameEnded) {
+    return (
+      <EndGameScreen
+        players={gameState.players}
+        lobbyCode={resolvedParams.code}
+        isHost={true}
+        onReturnToLobby={returnToLobby}
+        onCloseLobby={confirmCloseLobby}
+      />
     );
   }
 
@@ -311,10 +391,16 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                 {resolvedParams.code}
               </Badge>
             </div>
-            <Button onClick={endGame} variant="destructive" size="sm">
-              <XCircle className="mr-2 h-4 w-4" />
-              End Game
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={endGame} variant="outline" size="sm">
+                <Trophy className="mr-2 h-4 w-4" />
+                End Game
+              </Button>
+              <Button onClick={closeLobby} variant="destructive" size="sm">
+                <Power className="mr-2 h-4 w-4" />
+                Close Lobby
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -568,14 +654,20 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-orange-600" />
-              Confirm End Game
+              {confirmAction === "endGame" ? "Confirm End Game" : "Confirm Close Lobby"}
             </AlertDialogTitle>
             <AlertDialogDescription>{alertMessage}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmEndGame} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              End Game
+            <AlertDialogAction
+              onClick={handleConfirm}
+              className={confirmAction === "closeLobby"
+                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                : ""
+              }
+            >
+              {confirmAction === "endGame" ? "End Game" : "Close Lobby"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
