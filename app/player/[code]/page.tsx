@@ -313,7 +313,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                     {/* Category Headers */}
                     <div className="grid grid-cols-5 gap-2">
                       {gameState.categories.map((category) => (
-                        <div key={category.id} className="bg-gray-600 p-3 text-center rounded backdrop-blur-md">
+                        <div key={category.id} className="bg-gray-600/50 p-3 text-center rounded backdrop-blur-md border border-white/10">
                           <h2 className="text-sm font-bold uppercase truncate text-white">{category.name}</h2>
                         </div>
                       ))}
@@ -327,10 +327,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                           return (
                             <div
                               key={question.id}
-                              className={`aspect-video flex items-center justify-center text-3xl font-bold rounded text-center backdrop-blur-md ${
+                              className={`aspect-video flex items-center justify-center text-3xl font-bold rounded text-center backdrop-blur-md border ${
                                 question.answered
-                                  ? "bg-white/10 text-gray-500"
-                                  : "bg-primary text-primary-foreground"
+                                  ? "bg-white/10 text-gray-500 border-white/10"
+                                  : "bg-primary/80 text-primary-foreground border-white/20"
                               }`}
                             >
                               {question.answered ? "" : `$${question.value}`}
