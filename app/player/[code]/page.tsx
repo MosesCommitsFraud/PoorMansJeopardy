@@ -7,22 +7,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Bell, Trophy, Users, LogOut, AlertCircle, Keyboard, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
-  AlertDialogContent, 
+  AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogHeader, 
-  AlertDialogTitle 
+  AlertDialogHeader,
+  AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { GameState } from "@/types/game";
 import { EndGameScreen } from "@/components/EndGameScreen";
+import { useSettings } from "@/contexts/SettingsContext";
 
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
+  const { settings } = useSettings();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerId, setPlayerId] = useState<string>("");
   const [playerName, setPlayerName] = useState<string>("");
@@ -108,6 +110,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   };
 
   const playBuzzerSound = () => {
+    if (!settings.soundEnabled) return;
+
     try {
       const audio = new Audio('/buzzer.mp3');
       audio.volume = 0.5; // 50% volume

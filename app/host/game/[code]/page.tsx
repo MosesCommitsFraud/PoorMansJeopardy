@@ -8,22 +8,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Bell, BellOff, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
-  AlertDialogContent, 
+  AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogHeader, 
-  AlertDialogTitle 
+  AlertDialogHeader,
+  AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { GameState, Question } from "@/types/game";
 import { EndGameScreen } from "@/components/EndGameScreen";
+import { useSettings } from "@/contexts/SettingsContext";
 
 export default function HostGame({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
+  const { settings } = useSettings();
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -75,6 +77,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
   // Play buzzer sound when someone buzzes in
   const playBuzzerSound = () => {
+    if (!settings.soundEnabled) return;
+
     try {
       const audio = new Audio('/buzzer.mp3');
       audio.volume = 0.5; // 50% volume

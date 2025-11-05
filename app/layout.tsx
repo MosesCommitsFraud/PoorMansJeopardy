@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Dither from "@/components/Dither";
+import { SettingsProvider } from "@/contexts/SettingsContext";
+import LayoutContent from "@/components/LayoutContent";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,19 +19,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {/* Fixed background with Dither effect */}
-        <div className="fixed inset-0 -z-10">
-          <Dither
-            waveColor={[0.5, 0.5, 0.5]}
-            disableAnimation={false}
-            enableMouseInteraction={false}
-            colorNum={6}
-            waveAmplitude={0.3}
-            waveFrequency={5}
-            waveSpeed={0.02}
-          />
-        </div>
-        {children}
+        <SettingsProvider>
+          <LayoutContent>
+            {children}
+          </LayoutContent>
+        </SettingsProvider>
       </body>
     </html>
   );

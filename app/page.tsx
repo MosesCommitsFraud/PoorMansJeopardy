@@ -6,10 +6,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Crown, Users } from "lucide-react";
 import ShinyText from "@/components/ShinyText";
+import SettingsButton from "@/components/SettingsButton";
 
 export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center p-4">
+      <SettingsButton />
       <div className="w-full max-w-5xl mx-auto">
         <div className="text-center mb-12 space-y-6">
           {/* PMJ Logo */}
