@@ -1,54 +1,58 @@
 @import "tailwindcss";
 
 @theme {
-  /* Light theme - Clean and readable */
-  --color-background: oklch(98% 0 0);
-  --color-foreground: oklch(15% 0.01 270);
-  --color-card: oklch(100% 0 0);
-  --color-card-foreground: oklch(15% 0.01 270);
-  --color-popover: oklch(100% 0 0);
-  --color-popover-foreground: oklch(15% 0.01 270);
-  --color-primary: oklch(42% 0.18 250);
+  /* Frosted glass monochrome theme */
+  --color-background: oklch(95% 0 0 / 0.3);
+  --color-foreground: oklch(15% 0 0);
+  --color-card: oklch(98% 0 0 / 0.6);
+  --color-card-foreground: oklch(10% 0 0);
+  --color-popover: oklch(98% 0 0 / 0.8);
+  --color-popover-foreground: oklch(10% 0 0);
+  --color-primary: oklch(20% 0 0);
   --color-primary-foreground: oklch(98% 0 0);
-  --color-secondary: oklch(92% 0.01 270);
-  --color-secondary-foreground: oklch(15% 0.01 270);
-  --color-muted: oklch(94% 0.01 270);
-  --color-muted-foreground: oklch(50% 0.01 270);
-  --color-accent: oklch(94% 0.01 270);
-  --color-accent-foreground: oklch(15% 0.01 270);
-  --color-destructive: oklch(55% 0.22 25);
+  --color-secondary: oklch(90% 0 0 / 0.5);
+  --color-secondary-foreground: oklch(15% 0 0);
+  --color-muted: oklch(92% 0 0 / 0.4);
+  --color-muted-foreground: oklch(45% 0 0);
+  --color-accent: oklch(88% 0 0 / 0.6);
+  --color-accent-foreground: oklch(15% 0 0);
+  --color-destructive: oklch(55% 0.22 25); /* Red for close/delete */
   --color-destructive-foreground: oklch(98% 0 0);
-  --color-border: oklch(88% 0.01 270);
-  --color-input: oklch(88% 0.01 270);
-  --color-ring: oklch(42% 0.18 250);
+  --color-success: oklch(60% 0.15 145); /* Green for agree/confirm */
+  --color-success-foreground: oklch(98% 0 0);
+  --color-border: oklch(70% 0 0 / 0.3);
+  --color-input: oklch(92% 0 0 / 0.5);
+  --color-ring: oklch(30% 0 0);
   
-  --radius-lg: 0.5rem;
-  --radius-md: calc(0.5rem - 2px);
-  --radius-sm: calc(0.5rem - 4px);
+  --radius-lg: 0.75rem;
+  --radius-md: calc(0.75rem - 2px);
+  --radius-sm: calc(0.75rem - 4px);
 }
 
 @media (prefers-color-scheme: dark) {
   @theme {
-    /* Dark theme - Modern with excellent contrast */
-    --color-background: oklch(12% 0.01 270);
-    --color-foreground: oklch(95% 0.01 270);
-    --color-card: oklch(16% 0.01 270);
-    --color-card-foreground: oklch(95% 0.01 270);
-    --color-popover: oklch(16% 0.01 270);
-    --color-popover-foreground: oklch(95% 0.01 270);
-    --color-primary: oklch(65% 0.18 250);
-    --color-primary-foreground: oklch(12% 0.01 270);
-    --color-secondary: oklch(20% 0.01 270);
-    --color-secondary-foreground: oklch(95% 0.01 270);
-    --color-muted: oklch(22% 0.01 270);
-    --color-muted-foreground: oklch(65% 0.01 270);
-    --color-accent: oklch(22% 0.01 270);
-    --color-accent-foreground: oklch(95% 0.01 270);
-    --color-destructive: oklch(60% 0.22 25);
-    --color-destructive-foreground: oklch(12% 0.01 270);
-    --color-border: oklch(24% 0.01 270);
-    --color-input: oklch(24% 0.01 270);
-    --color-ring: oklch(65% 0.18 250);
+    /* Dark frosted glass monochrome theme */
+    --color-background: oklch(12% 0 0 / 0.3);
+    --color-foreground: oklch(95% 0 0);
+    --color-card: oklch(18% 0 0 / 0.6);
+    --color-card-foreground: oklch(95% 0 0);
+    --color-popover: oklch(16% 0 0 / 0.8);
+    --color-popover-foreground: oklch(95% 0 0);
+    --color-primary: oklch(85% 0 0);
+    --color-primary-foreground: oklch(12% 0 0);
+    --color-secondary: oklch(25% 0 0 / 0.5);
+    --color-secondary-foreground: oklch(95% 0 0);
+    --color-muted: oklch(22% 0 0 / 0.4);
+    --color-muted-foreground: oklch(60% 0 0);
+    --color-accent: oklch(28% 0 0 / 0.6);
+    --color-accent-foreground: oklch(95% 0 0);
+    --color-destructive: oklch(60% 0.22 25); /* Red for close/delete */
+    --color-destructive-foreground: oklch(98% 0 0);
+    --color-success: oklch(65% 0.15 145); /* Green for agree/confirm */
+    --color-success-foreground: oklch(10% 0 0);
+    --color-border: oklch(40% 0 0 / 0.3);
+    --color-input: oklch(25% 0 0 / 0.5);
+    --color-ring: oklch(75% 0 0);
   }
 }
 
@@ -57,8 +61,23 @@
 }
 
 body {
-  background-color: var(--color-background);
+  background: transparent;
   color: var(--color-foreground);
+}
+
+/* Frosted glass effect utilities */
+.glass {
+  background: var(--color-card);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--color-border);
+}
+
+.glass-strong {
+  background: var(--color-popover);
+  backdrop-filter: blur(20px) saturate(200%);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  border: 1px solid var(--color-border);
 }
 
 button:not(:disabled) {
@@ -67,4 +86,5 @@ button:not(:disabled) {
 
 button:disabled {
   cursor: not-allowed;
+  opacity: 0.5;
 }

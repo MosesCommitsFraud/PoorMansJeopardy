@@ -98,18 +98,17 @@ export default function JoinLobby() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center p-4">
+    <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-4">
         <Button
           variant="ghost"
           onClick={() => router.push("/")}
-          className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border border-white/10"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Home
         </Button>
 
-        <Card className="shadow-2xl border border-white/20 bg-black/20 backdrop-blur-xl">
+        <Card className="shadow-2xl">
           <CardHeader className="text-center space-y-4 pb-4">
             <div className="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
               <Users className="w-10 h-10 text-white" />

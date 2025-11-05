@@ -376,8 +376,8 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 flex items-center justify-center">
-        <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
+      <div className="min-h-screen flex items-center justify-center">
+        <Card>
           <CardContent className="p-8">
             <p className="text-lg">Loading...</p>
           </CardContent>
@@ -387,7 +387,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-8">
+    <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -395,7 +395,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             <p className="text-gray-300">Lobby Code: <span className="font-mono font-bold text-yellow-400">{resolvedParams.code}</span></p>
           </div>
           <div className="flex gap-3 flex-wrap">
-            <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
+            <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Lobby
             </Button>
@@ -403,7 +403,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             {/* Template Actions */}
             {templates.length > 0 && (
               <Select onValueChange={loadTemplate}>
-                <SelectTrigger className="w-[200px] backdrop-blur-sm bg-white/5 border-white/10">
+                <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Load Template..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -416,13 +416,13 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
               </Select>
             )}
             
-            <Button onClick={openSaveTemplateDialog} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
+            <Button onClick={openSaveTemplateDialog} variant="outline">
               <BookTemplate className="mr-2 h-4 w-4" />
               Save as Template
             </Button>
             
             {templates.length > 0 && (
-              <Button onClick={() => setShowManageDialog(true)} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
+              <Button onClick={() => setShowManageDialog(true)} variant="outline">
                 <FolderOpen className="mr-2 h-4 w-4" />
                 Manage Templates
               </Button>
@@ -431,18 +431,17 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             <Button 
               onClick={() => setShowCategoryBrowser(true)} 
               variant="outline" 
-              className="backdrop-blur-sm bg-green-500/10 hover:bg-green-500/20 border-green-500/30"
               disabled={isGenerating}
             >
               <Database className="mr-2 h-4 w-4" />
               {isGenerating ? "Generating..." : "Browse Questions"}
             </Button>
 
-            <Button onClick={loadDefaultGame} variant="outline" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
+            <Button onClick={loadDefaultGame} variant="outline">
               Load Default Game
             </Button>
             
-            <Button onClick={addCategory} variant="secondary" className="backdrop-blur-sm">
+            <Button onClick={addCategory} variant="secondary">
               <Plus className="mr-2 h-4 w-4" />
               Add Category
             </Button>
@@ -456,7 +455,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
         <div className="grid grid-cols-1 gap-6">
           {categories.map((category) => (
-            <Card key={category.id} className="border border-white/20 bg-black/20 backdrop-blur-xl">
+            <Card key={category.id}>
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div className="flex-1 mr-4">
@@ -576,7 +575,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
       {/* Save Template Dialog */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
-        <DialogContent className="border border-white/20 bg-black/40 backdrop-blur-xl">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {editingTemplateId ? "Rename Template" : "Save as Template"}
@@ -631,7 +630,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
       {/* Manage Templates Dialog */}
       <Dialog open={showManageDialog} onOpenChange={setShowManageDialog}>
-        <DialogContent className="border border-white/20 bg-black/40 backdrop-blur-xl max-w-2xl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Manage Templates</DialogTitle>
             <DialogDescription>
@@ -645,7 +644,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
               </p>
             ) : (
               templates.map((template) => (
-                <Card key={template.id} className="border border-white/10 bg-white/5 backdrop-blur-sm">
+                <Card key={template.id}>
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start gap-4">
                       <div className="flex-1">

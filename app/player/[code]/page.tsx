@@ -206,7 +206,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const currentPlayer = gameState?.players.find(p => p.id === playerId);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-3">
+    <div className="min-h-screen p-3">
       <div className="max-w-[1800px] mx-auto">
         {/* Compact Header */}
         <div className="mb-3 flex justify-between items-center">
@@ -218,14 +218,14 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
               <span className="font-semibold">{playerName}</span> • {resolvedParams.code}
             </p>
           </div>
-          <Button onClick={leaveGame} variant="outline" size="sm" className="backdrop-blur-sm bg-white/5 hover:bg-white/10 border-white/10">
+          <Button onClick={leaveGame} variant="outline" size="sm">
             <LogOut className="mr-2 h-4 w-4" />
             Leave
           </Button>
         </div>
 
         {/* Compact Buzzer Banner */}
-        <Card className="border border-white/20 bg-black/20 backdrop-blur-xl mb-3">
+        <Card className="mb-3">
           <CardContent className="p-3">
             <div className="flex items-center justify-between gap-4">
               {/* Buzzer Status */}
@@ -271,7 +271,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         <div className="grid grid-cols-12 gap-3 h-[calc(100vh-180px)]">
           {/* Left Column: Your Score & Position */}
           <div className="col-span-1 space-y-3 flex flex-col">
-            <Card className="bg-gradient-to-br from-blue-600/40 to-purple-600/40 border border-blue-400/30 backdrop-blur-xl flex-1 flex flex-col justify-center">
+            <Card className="border border-blue-400/30 flex-1 flex flex-col justify-center">
               <CardContent className="p-3">
                 <div className="text-center space-y-4">
                   <Trophy className="h-8 w-8 text-yellow-400 mx-auto" />
@@ -301,7 +301,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
           {/* Center Column: Game Board */}
           <div className="col-span-9">
             {gameState?.categories && gameState.categories.length > 0 && (
-              <Card className="border border-white/20 bg-black/20 backdrop-blur-xl h-full flex flex-col">
+              <Card className="h-full flex flex-col">
                 <CardHeader className="pb-2 flex-shrink-0">
                   <CardTitle className="text-center text-lg">Game Board</CardTitle>
                 </CardHeader>
@@ -344,7 +344,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
           {/* Right Column: All Players Scoreboard */}
           <div className="col-span-2">
-            <Card className="border border-white/20 bg-black/20 backdrop-blur-xl h-full flex flex-col">
+            <Card className="h-full flex flex-col">
               <CardHeader className="pb-2 flex-shrink-0">
                 <CardTitle className="flex items-center text-sm">
                   <Users className="mr-1 h-3 w-3" />
@@ -395,7 +395,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
       {/* Full-Screen Current Question Modal */}
       <Dialog open={!!gameState?.currentQuestion} onOpenChange={() => {}}>
-        <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 bg-black/90 backdrop-blur-2xl flex items-center justify-center p-12">
+        <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 flex items-center justify-center p-12">
           <div className="text-center space-y-8 w-full">
             <div className="text-2xl font-bold text-blue-400 mb-6">
               ${gameState?.currentQuestion?.value}

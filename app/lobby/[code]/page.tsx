@@ -232,7 +232,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center p-4">
+      <main className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="p-8 text-center">
             <p className="text-destructive text-lg mb-4">{error}</p>
@@ -245,7 +245,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
   if (!lobby) {
     return (
-      <main className="min-h-screen bg-background flex items-center justify-center p-4">
+      <main className="min-h-screen flex items-center justify-center p-4">
         <Card>
           <CardContent className="p-8 flex flex-col items-center gap-4">
             <Spinner color="primary" label="Loading lobby..." labelColor="foreground" />
@@ -258,7 +258,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const playerName = localStorage.getItem("jeopardy_player_name");
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-8">
+    <main className="min-h-screen p-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold mb-4 tracking-wider bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-purple-400 dark:to-blue-400">
@@ -343,7 +343,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
         </Card>
 
         {/* Players Card */}
-        <Card className="mb-6 border border-white/20 bg-black/20 backdrop-blur-xl">
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Users className="mr-2 h-5 w-5" />
@@ -395,7 +395,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
         {/* Host Controls */}
         {isHost && (
-          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
+          <Card>
             <CardHeader>
               <CardTitle>Host Controls</CardTitle>
             </CardHeader>
@@ -436,7 +436,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
         {/* Player Waiting */}
         {!isHost && (
-          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
+          <Card>
             <CardContent className="p-8 text-center">
               <div className="text-6xl mb-4">⏳</div>
               <h3 className="text-xl font-semibold mb-2">Waiting for host...</h3>

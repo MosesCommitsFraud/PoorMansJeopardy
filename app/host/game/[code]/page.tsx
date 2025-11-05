@@ -246,7 +246,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 p-4">
+    <div className="min-h-screen p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
@@ -264,7 +264,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
         {/* Players and Scores */}
         <div className="mb-6">
-          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
+          <Card>
             <CardHeader>
               <CardTitle>Players & Scores</CardTitle>
             </CardHeader>
@@ -294,7 +294,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
         {/* Buzzer Control */}
         <div className="mb-6">
-          <Card className="border border-white/20 bg-black/20 backdrop-blur-xl">
+          <Card>
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
