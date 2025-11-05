@@ -294,11 +294,13 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     </div>
                     <div className="font-semibold">{player.name}</div>
                     <div className="flex gap-2 mt-2">
-                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, 100)} className="backdrop-blur-sm">
-                        <Plus className="h-3 w-3" />
+                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, 100)} className="backdrop-blur-sm" title="Add $100">
+                        <Plus className="h-3 w-3 mr-1" />
+                        $100
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, -100)} className="backdrop-blur-sm">
-                        <Minus className="h-3 w-3" />
+                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, -100)} className="backdrop-blur-sm" title="Subtract $100">
+                        <Minus className="h-3 w-3 mr-1" />
+                        $100
                       </Button>
                     </div>
                   </div>
@@ -311,33 +313,42 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         {/* Buzzer Control */}
         <div className="mb-6">
           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Buzzer Control
+              </CardTitle>
+            </CardHeader>
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                  <div className="text-lg font-semibold">Buzzer:</div>
+                  <div className="text-lg font-semibold">Status:</div>
                   <div className={`px-4 py-2 rounded-full font-bold ${
                     gameState.buzzerActive ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"
                   }`}>
-                    {gameState.buzzerActive ? "ACTIVE" : "INACTIVE"}
+                    {gameState.buzzerActive ? "🔔 ACTIVE - Players Can Buzz In" : "🔕 INACTIVE - Buzzer Disabled"}
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <Button onClick={activateBuzzer}>
                     <Bell className="mr-2 h-4 w-4" />
-                    Activate
+                    Activate Buzzer
                   </Button>
                   <Button onClick={deactivateBuzzer} variant="secondary">
                     <BellOff className="mr-2 h-4 w-4" />
-                    Deactivate
+                    Deactivate Buzzer
                   </Button>
                   <Button onClick={clearBuzzer} variant="outline">
-                    Clear
+                    Clear Queue
                   </Button>
                 </div>
               </div>
               {(gameState?.buzzerQueue || []).length > 0 && (
                 <div className="mt-4 p-4 bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 rounded-lg">
-                  <div className="font-bold mb-2">Buzzer Queue:</div>
+                  <div className="font-bold mb-2">
+                    Buzzer Queue ({(gameState?.buzzerQueue || []).length} {(gameState?.buzzerQueue || []).length === 1 ? "player" : "players"}):
+                  </div>
+                  <div className="text-sm text-yellow-200 mb-3">Players buzzed in order:</div>
                   <div className="space-y-2">
                     {(gameState?.buzzerQueue || []).map((buzz, index) => (
                       <div key={index} className="flex items-center gap-2">
@@ -345,6 +356,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                           {index + 1}
                         </span>
                         <span className="font-semibold">{buzz.playerName}</span>
+                        {index === 0 && <Badge variant="secondary" className="ml-2">First to buzz</Badge>}
                       </div>
                     ))}
                   </div>
@@ -355,7 +367,14 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         </div>
 
         {/* Game Board */}
-        <Card className="p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Game Board - Click any question to preview</span>
+              <span className="text-sm font-normal text-muted-foreground">Hover over completed questions to reopen them</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
           <div className="grid gap-2">
             <div className="grid grid-cols-5 gap-2">
               {gameState.categories.map((category) => (
@@ -400,6 +419,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               </div>
             ))}
           </div>
+          </CardContent>
         </Card>
       </div>
 
@@ -407,7 +427,12 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && dismissQuestion()}>
         <DialogContent className="max-w-3xl border border-white/20 bg-black/30 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle>Question - ${selectedQuestion?.value}</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Question Worth: ${selectedQuestion?.value}</span>
+              <Badge variant={gameState?.currentQuestion?.id === selectedQuestion?.id ? "default" : "outline"}>
+                {gameState?.currentQuestion?.id === selectedQuestion?.id ? "🔴 LIVE - Visible to Players" : "Preview Mode - Not Yet Shown"}
+              </Badge>
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
             <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 p-6 rounded-lg">
@@ -443,10 +468,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
             <div className="space-y-3">
               <div className="flex gap-2">
                 <Button onClick={showToPlayers} className="flex-1" variant={gameState?.currentQuestion?.id === selectedQuestion?.id ? "secondary" : "default"}>
-                  {gameState?.currentQuestion?.id === selectedQuestion?.id ? "✓ Shown to Players" : "📺 Show to Players"}
+                  {gameState?.currentQuestion?.id === selectedQuestion?.id ? "✓ Question Shown to Players" : "📺 Show Question to Players"}
                 </Button>
                 <Button onClick={() => setShowAnswer(!showAnswer)} variant="outline" className="flex-1">
-                  {showAnswer ? "Hide Answer (Host)" : "Show Answer (Host)"}
+                  {showAnswer ? "🔒 Hide Answer (Host Only)" : "👁️ Reveal Answer (Host Only)"}
                 </Button>
               </div>
               <div className="flex gap-2">
@@ -454,20 +479,21 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   onClick={toggleAnswerToPlayers}
                   variant={gameState?.showAnswerToPlayers ? "secondary" : "outline"}
                   className="flex-1"
+                  disabled={!gameState?.currentQuestion?.id}
                 >
-                  {gameState?.showAnswerToPlayers ? "✓ Answer Shown to Players" : "📺 Show Answer to Players"}
+                  {gameState?.showAnswerToPlayers ? "✓ Answer Visible to Players" : "📺 Reveal Answer to Players"}
                 </Button>
                 <Button 
                   onClick={gameState?.buzzerActive ? deactivateBuzzer : activateBuzzer} 
                   variant={gameState?.buzzerActive ? "secondary" : "default"}
                   className="flex-1"
                 >
-                  {gameState?.buzzerActive ? <><BellOff className="mr-2 h-4 w-4" />Deactivate Buzzer</> : <><Bell className="mr-2 h-4 w-4" />Activate Buzzer</>}
+                  {gameState?.buzzerActive ? <><BellOff className="mr-2 h-4 w-4" />Disable Buzzer</> : <><Bell className="mr-2 h-4 w-4" />Enable Buzzer</>}
                 </Button>
               </div>
               <div className="flex gap-2">
                 <Button onClick={closeQuestion} variant="destructive" className="flex-1">
-                  Close & Mark Answered
+                  ✓ Close Question & Mark Complete
                 </Button>
               </div>
             </div>
