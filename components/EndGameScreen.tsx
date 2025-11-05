@@ -118,34 +118,45 @@ export function EndGameScreen({ players, lobbyCode, isHost, onReturnToLobby, onC
           </CardContent>
         </Card>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Button
-            size="lg"
-            onClick={onReturnToLobby}
-            className="text-lg px-8 py-6 gap-2"
-          >
-            <Home className="h-5 w-5" />
-            Return to Lobby
-          </Button>
-          {isHost && onCloseLobby && (
+        {/* Action Buttons - Host Only */}
+        {isHost && (
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               size="lg"
-              variant="destructive"
-              onClick={onCloseLobby}
+              onClick={onReturnToLobby}
               className="text-lg px-8 py-6 gap-2"
             >
-              <Power className="h-5 w-5" />
-              Close Lobby
+              <Home className="h-5 w-5" />
+              Return to Lobby
             </Button>
-          )}
-        </div>
+            {onCloseLobby && (
+              <Button
+                size="lg"
+                variant="destructive"
+                onClick={onCloseLobby}
+                className="text-lg px-8 py-6 gap-2"
+              >
+                <Power className="h-5 w-5" />
+                Close Lobby
+              </Button>
+            )}
+          </div>
+        )}
 
-        {/* Game Code Reminder */}
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">
-            Game Code: <span className="font-mono font-semibold">{lobbyCode}</span>
-          </p>
+        {/* Player waiting message */}
+        {!isHost && (
+          <div className="text-center">
+            <p className="text-lg text-muted-foreground">
+              Waiting for host to return to lobby...
+            </p>
+          </div>
+        )}
+
+        {/* Game Code Badge */}
+        <div className="flex justify-center">
+          <Badge variant="outline" className="px-4 py-2 text-base font-mono backdrop-blur-md">
+            Game Code: {lobbyCode}
+          </Badge>
         </div>
       </div>
     </div>
