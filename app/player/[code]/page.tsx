@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Bell, Trophy, Users, LogOut, AlertCircle, Keyboard } from "lucide-react";
+import { Bell, Trophy, Users, LogOut, AlertCircle, Keyboard, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { 
   AlertDialog,
@@ -33,6 +33,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const lastBuzzerCountRef = useRef(0);
   const justBuzzedLocallyRef = useRef(false);
   const [lobbyName, setLobbyName] = useState("");
+  const [currentTime, setCurrentTime] = useState<number>(0);
 
   useEffect(() => {
     const savedPlayerId = localStorage.getItem("jeopardy_player_id");
@@ -126,6 +127,19 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     
     lastBuzzerCountRef.current = currentBuzzerCount;
   }, [gameState?.buzzerQueue]);
+
+  // Timer update effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (gameState?.timerEndAt) {
+        const now = Date.now();
+        const remaining = Math.max(0, gameState.timerEndAt - now);
+        setCurrentTime(Math.ceil(remaining / 1000));
+      }
+    }, 100); // Update every 100ms for smooth countdown
+    
+    return () => clearInterval(interval);
+  }, [gameState?.timerEndAt]);
 
   const buzz = async () => {
     if (gameState?.buzzerActive && !hasBuzzed) {
@@ -398,7 +412,24 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
       {/* Full-Screen Current Question Modal */}
       <Dialog open={!!gameState?.currentQuestion} onOpenChange={() => {}}>
-        <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 flex items-center justify-center p-12">
+        <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 flex items-center justify-center p-12 relative">
+          {/* Timer Chip - Top Right */}
+          {gameState?.timerEndAt && (
+            <div className="absolute top-6 right-6">
+              <Badge 
+                variant="outline" 
+                className={`flex items-center gap-2 px-4 py-2 text-2xl font-bold backdrop-blur-md ${
+                  currentTime <= 5 ? 'bg-red-500/20 border-red-500 text-red-500 animate-pulse' : 'bg-white/10 border-white/30'
+                }`}
+              >
+                <Clock className="h-6 w-6" />
+                <span className="tabular-nums">
+                  {Math.floor(currentTime / 60)}:{(currentTime % 60).toString().padStart(2, '0')}
+                </span>
+              </Badge>
+            </div>
+          )}
+          
           <div className="text-center space-y-8 w-full">
             <div className="text-2xl font-bold text-blue-400 mb-6">
               ${gameState?.currentQuestion?.value}

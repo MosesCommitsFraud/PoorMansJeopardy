@@ -35,6 +35,8 @@ export interface GameState {
   buzzerQueue: BuzzerEvent[];
   gameStarted: boolean;
   showAnswerToPlayers?: boolean;
+  timerEndAt?: number | null; // Timestamp when timer should end (null/undefined = no active timer)
+  timerDuration?: number; // Duration in seconds (default 30)
 }
 
 export interface Lobby {

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, BellOff, Trophy, Plus, Minus, XCircle, AlertCircle } from "lucide-react";
+import { Bell, BellOff, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [alertMessage, setAlertMessage] = useState("");
   const lastBuzzerCountRef = useRef(0);
   const [lobbyName, setLobbyName] = useState("");
+  const [timerDuration, setTimerDuration] = useState(30);
+  const [currentTime, setCurrentTime] = useState<number>(0);
 
   useEffect(() => {
     loadGameState();
@@ -96,6 +99,47 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     
     lastBuzzerCountRef.current = currentBuzzerCount;
   }, [gameState?.buzzerQueue, gameState?.gameStarted]);
+
+  // Timer update effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (gameState?.timerEndAt) {
+        const now = Date.now();
+        const remaining = Math.max(0, gameState.timerEndAt - now);
+        setCurrentTime(Math.ceil(remaining / 1000));
+        
+        // Auto-stop timer when it reaches 0
+        if (remaining <= 0 && gameState.timerEndAt) {
+          stopTimer();
+        }
+      }
+    }, 100); // Update every 100ms for smooth countdown
+    
+    return () => clearInterval(interval);
+  }, [gameState?.timerEndAt]);
+
+  const startTimer = async () => {
+    const duration = gameState?.timerDuration || timerDuration;
+    const endAt = Date.now() + (duration * 1000);
+    await updateGameState({ 
+      timerEndAt: endAt,
+      timerDuration: duration
+    });
+  };
+
+  const stopTimer = async () => {
+    await updateGameState({ timerEndAt: null });
+  };
+
+  const resetTimer = async () => {
+    await updateGameState({ timerEndAt: null });
+    setCurrentTime(0);
+  };
+
+  const setTimerDurationInState = async (duration: number) => {
+    setTimerDuration(duration);
+    await updateGameState({ timerDuration: duration });
+  };
 
   const updateGameState = async (updates: Partial<GameState>) => {
     if (!gameState) return;
@@ -455,6 +499,79 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     />
                   </div>
                 )}
+              </div>
+            )}
+            
+            {/* Timer Controls */}
+            <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-4 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  <span className="font-semibold">Timer</span>
+                </div>
+                {gameState?.timerEndAt && (
+                  <div className={`text-3xl font-bold tabular-nums ${
+                    currentTime <= 5 ? 'text-red-500 animate-pulse' : 'text-white'
+                  }`}>
+                    {Math.floor(currentTime / 60)}:{(currentTime % 60).toString().padStart(2, '0')}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 items-center">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={timerDuration}
+                    onChange={(e) => setTimerDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                    onBlur={() => setTimerDurationInState(timerDuration)}
+                    className="w-20 h-9 text-sm"
+                    min="1"
+                    max="999"
+                  />
+                  <span className="text-sm text-muted-foreground">seconds</span>
+                </div>
+                <div className="flex gap-2 ml-auto">
+                  {!gameState?.timerEndAt ? (
+                    <Button onClick={startTimer} size="sm" variant="outline">
+                      <Play className="mr-2 h-4 w-4" />
+                      Start Timer
+                    </Button>
+                  ) : (
+                    <Button onClick={stopTimer} size="sm" variant="outline">
+                      <Pause className="mr-2 h-4 w-4" />
+                      Stop Timer
+                    </Button>
+                  )}
+                  <Button onClick={resetTimer} size="sm" variant="outline">
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Buzzer Queue in Dialog */}
+            {(gameState?.buzzerQueue || []).length > 0 && (
+              <div className="bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-yellow-400" />
+                    <span className="font-semibold">Buzzer Queue ({(gameState?.buzzerQueue || []).length})</span>
+                  </div>
+                  <Button onClick={clearBuzzer} size="sm" variant="outline">
+                    Clear
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(gameState?.buzzerQueue || []).map((buzz, index) => (
+                    <div key={index} className="flex items-center gap-1.5 bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-full px-3 py-1.5">
+                      <span className="text-sm font-bold text-yellow-300">
+                        {index + 1}.
+                      </span>
+                      <span className="text-sm font-medium">{buzz.playerName}</span>
+                      {index === 0 && <Badge variant="secondary" className="ml-1 text-xs">First</Badge>}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             
