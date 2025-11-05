@@ -34,7 +34,7 @@ export default function Home() {
           <Link href="/lobby/create" className="group">
             <Card className="h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary/50">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <div className="mx-auto mb-4 w-16 h-16 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <Crown className="w-8 h-8 text-white" />
                 </div>
                 <CardTitle className="text-2xl mb-2">Host a Game</CardTitle>
@@ -55,7 +55,7 @@ export default function Home() {
           <Link href="/lobby/join" className="group">
             <Card className="h-full transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary/50">
               <CardHeader className="text-center pb-4">
-                <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <div className="mx-auto mb-4 w-16 h-16 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <Users className="w-8 h-8 text-white" />
                 </div>
                 <CardTitle className="text-2xl mb-2">Join a Game</CardTitle>

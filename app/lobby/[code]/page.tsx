@@ -323,10 +323,10 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
         </div>
 
         {/* Lobby Code Card */}
-        <Card className="mb-6 bg-gradient-to-br from-yellow-400 to-yellow-600 border-0 shadow-2xl">
+        <Card className="mb-6 bg-card/60 backdrop-blur-md border shadow-2xl">
           <CardContent className="p-6 text-center">
-            <div className="text-sm font-semibold text-yellow-900 mb-2">LOBBY CODE</div>
-            <div className="text-6xl font-bold text-white tracking-widest mb-4 font-mono">
+            <div className="text-sm font-semibold mb-2">LOBBY CODE</div>
+            <div className="text-6xl font-bold text-white tracking-widest mb-4 font-mono" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>
               {resolvedParams.code}
             </div>
             <div className="flex gap-2 justify-center">

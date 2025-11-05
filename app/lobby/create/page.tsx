@@ -66,7 +66,7 @@ export default function CreateLobby() {
 
         <Card className="shadow-2xl">
           <CardHeader className="text-center space-y-4 pb-4">
-            <div className="mx-auto w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <div className="mx-auto w-20 h-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl flex items-center justify-center shadow-lg">
               <Crown className="w-10 h-10 text-white" />
             </div>
             
