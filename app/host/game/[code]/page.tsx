@@ -328,6 +328,12 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     if (!gameState) return;
 
     try {
+      // Update win count for the winner
+      const playerWins = gameState.playerWins || {};
+      if (gameState.winnerId) {
+        playerWins[gameState.winnerId] = (playerWins[gameState.winnerId] || 0) + 1;
+      }
+
       // Reset game state back to lobby
       await updateGameState({
         gameStarted: false,
@@ -336,7 +342,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         buzzerActive: false,
         buzzerQueue: [],
         showAnswerToPlayers: false,
-        timerEndAt: null
+        timerEndAt: null,
+        playerWins: playerWins
       });
 
       // Navigate back to lobby
@@ -368,6 +375,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         isHost={true}
         onReturnToLobby={returnToLobby}
         onCloseLobby={confirmCloseLobby}
+        playerWins={gameState.playerWins}
       />
     );
   }
@@ -412,29 +420,39 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {gameState.players.map((player) => (
-                  <div key={player.id} className="backdrop-blur-sm border border-white/20 p-4 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <Trophy className="h-5 w-5 text-yellow-400" />
-                      <div className={`text-2xl font-bold ${
-                        player.score > 0 ? 'text-green-500' : player.score < 0 ? 'text-red-500' : ''
-                      }`}>
-                        ${player.score}
+                {gameState.players.map((player) => {
+                  const winCount = gameState.playerWins?.[player.id] || 0;
+                  return (
+                    <div key={player.id} className="backdrop-blur-sm border border-white/20 p-4 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <Trophy className="h-5 w-5 text-yellow-400" />
+                        <div className={`text-2xl font-bold ${
+                          player.score > 0 ? 'text-green-500' : player.score < 0 ? 'text-red-500' : ''
+                        }`}>
+                          ${player.score}
+                        </div>
+                      </div>
+                      <div className="font-semibold flex items-center gap-2 flex-wrap">
+                        <span>{player.name}</span>
+                        {winCount > 0 && (
+                          <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                            {winCount} {winCount === 1 ? "win" : "wins"}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, 100)} className="backdrop-blur-sm" title="Add $100">
+                          <Plus className="h-3 w-3 mr-1" />
+                          $100
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, -100)} className="backdrop-blur-sm" title="Subtract $100">
+                          <Minus className="h-3 w-3 mr-1" />
+                          $100
+                        </Button>
                       </div>
                     </div>
-                    <div className="font-semibold">{player.name}</div>
-                    <div className="flex gap-2 mt-2">
-                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, 100)} className="backdrop-blur-sm" title="Add $100">
-                        <Plus className="h-3 w-3 mr-1" />
-                        $100
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, -100)} className="backdrop-blur-sm" title="Subtract $100">
-                        <Minus className="h-3 w-3 mr-1" />
-                        $100
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

@@ -366,6 +366,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {lobby.gameState.players.map((player: any) => {
                   const isWinner = lobby.gameState.winnerId && player.id === lobby.gameState.winnerId;
+                  const winCount = lobby.gameState.playerWins?.[player.id] || 0;
                   return (
                     <div
                       key={player.id}
@@ -391,6 +392,11 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
                           {player.name}
                           {isWinner && (
                             <Crown className="w-4 h-4 text-yellow-500" title="Last Game Winner" />
+                          )}
+                          {winCount > 0 && (
+                            <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                              {winCount} {winCount === 1 ? "win" : "wins"}
+                            </Badge>
                           )}
                           {player.name === playerName && (
                             <span className="text-xs text-primary font-normal">(You)</span>

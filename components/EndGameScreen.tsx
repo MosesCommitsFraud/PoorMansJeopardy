@@ -13,9 +13,10 @@ interface EndGameScreenProps {
   isHost: boolean;
   onReturnToLobby: () => void;
   onCloseLobby?: () => void;
+  playerWins?: Record<string, number>;
 }
 
-export function EndGameScreen({ players, lobbyCode, isHost, onReturnToLobby, onCloseLobby }: EndGameScreenProps) {
+export function EndGameScreen({ players, lobbyCode, isHost, onReturnToLobby, onCloseLobby, playerWins }: EndGameScreenProps) {
   // Sort players by score (highest first)
   const sortedPlayers = [...players]
     .filter(p => !p.isHost)
@@ -80,40 +81,48 @@ export function EndGameScreen({ players, lobbyCode, isHost, onReturnToLobby, onC
                   No players participated in this game
                 </p>
               ) : (
-                sortedPlayers.map((player, index) => (
-                  <div
-                    key={player.id}
-                    className={`flex items-center justify-between p-4 rounded-lg transition-all backdrop-blur-md ${
-                      index === 0
-                        ? "bg-card/80 border-2 border-yellow-500/40 shadow-lg"
-                        : "bg-card/50 border border-border"
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center justify-center w-10">
-                        {getRankIcon(index)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`font-semibold ${index === 0 ? "text-xl" : "text-lg"}`}>
-                            {player.name}
-                          </span>
-                          {index < 3 && (
-                            <Badge variant={getRankBadgeVariant(index)} className="text-xs">
-                              #{index + 1}
-                            </Badge>
+                sortedPlayers.map((player, index) => {
+                  const winCount = playerWins?.[player.id] || 0;
+                  return (
+                    <div
+                      key={player.id}
+                      className={`flex items-center justify-between p-4 rounded-lg transition-all backdrop-blur-md ${
+                        index === 0
+                          ? "bg-card/80 border-2 border-yellow-500/40 shadow-lg"
+                          : "bg-card/50 border border-border"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center w-10">
+                          {getRankIcon(index)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`font-semibold ${index === 0 ? "text-xl" : "text-lg"}`}>
+                              {player.name}
+                            </span>
+                            {index < 3 && (
+                              <Badge variant={getRankBadgeVariant(index)} className="text-xs">
+                                #{index + 1}
+                              </Badge>
+                            )}
+                            {winCount > 0 && (
+                              <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                                {winCount} {winCount === 1 ? "win" : "wins"}
+                              </Badge>
+                            )}
+                          </div>
+                          {index === 0 && hasWinner && (
+                            <p className="text-sm text-muted-foreground">Champion</p>
                           )}
                         </div>
-                        {index === 0 && hasWinner && (
-                          <p className="text-sm text-muted-foreground">Champion</p>
-                        )}
+                      </div>
+                      <div className={`font-bold ${index === 0 ? "text-2xl" : "text-xl"}`}>
+                        ${player.score.toLocaleString()}
                       </div>
                     </div>
-                    <div className={`font-bold ${index === 0 ? "text-2xl" : "text-xl"}`}>
-                      ${player.score.toLocaleString()}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </CardContent>

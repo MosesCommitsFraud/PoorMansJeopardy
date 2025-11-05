@@ -40,6 +40,7 @@ export interface GameState {
   gameEnded?: boolean; // Whether the game has ended
   endedAt?: number; // Timestamp when the game ended
   winnerId?: string | null; // ID of the winner
+  playerWins?: Record<string, number>; // Track wins per player ID in this lobby
 }
 
 export interface Lobby {

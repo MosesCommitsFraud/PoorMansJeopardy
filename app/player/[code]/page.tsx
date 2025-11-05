@@ -245,6 +245,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         lobbyCode={resolvedParams.code}
         isHost={false}
         onReturnToLobby={returnToLobby}
+        playerWins={gameState.playerWins}
       />
     );
   }
@@ -399,37 +400,45 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 <div className="space-y-2">
                   {gameState?.players
                     .sort((a, b) => b.score - a.score)
-                    .map((player, index) => (
-                      <div 
-                        key={player.id}
-                        className={`p-2 rounded-lg backdrop-blur-sm border border-white/20 p-4 ${
-                          player.id === playerId 
-                        }`}
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <div className={`text-base font-bold ${
-                              index === 0 ? "text-yellow-400" : 
-                              index === 1 ? "text-gray-300" : 
-                              index === 2 ? "text-orange-400" : "text-gray-400"
-                            }`}>
-                              #{index + 1}
+                    .map((player, index) => {
+                      const winCount = gameState.playerWins?.[player.id] || 0;
+                      return (
+                        <div
+                          key={player.id}
+                          className={`p-2 rounded-lg backdrop-blur-sm border border-white/20 p-4 ${
+                            player.id === playerId
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <div className={`text-base font-bold ${
+                                index === 0 ? "text-yellow-400" :
+                                index === 1 ? "text-gray-300" :
+                                index === 2 ? "text-orange-400" : "text-gray-400"
+                              }`}>
+                                #{index + 1}
+                              </div>
+                              <div className={`text-base font-bold ${
+                                player.score > 0 ? 'text-green-500' : player.score < 0 ? 'text-red-500' : 'text-white'
+                              }`}>
+                                ${player.score}
+                              </div>
                             </div>
-                            <div className={`text-base font-bold ${
-                              player.score > 0 ? 'text-green-500' : player.score < 0 ? 'text-red-500' : 'text-white'
-                            }`}>
-                              ${player.score}
+                            <div className="font-semibold text-xs text-white flex items-center gap-1 flex-wrap">
+                              <span className="truncate">{player.name}</span>
+                              {winCount > 0 && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  {winCount}W
+                                </Badge>
+                              )}
+                              {player.id === playerId && (
+                                <span className="text-[10px] text-blue-400">(You)</span>
+                              )}
                             </div>
-                          </div>
-                          <div className="font-semibold text-xs truncate text-white">
-                            {player.name}
-                            {player.id === playerId && (
-                              <span className="ml-1 text-[10px] text-blue-400">(You)</span>
-                            )}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </CardContent>
             </Card>
