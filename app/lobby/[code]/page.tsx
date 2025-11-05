@@ -409,15 +409,47 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
               <CardTitle>Host Controls</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-muted/50 p-4 rounded-lg border">
-                <p className="text-sm text-foreground mb-2">
-                  <strong>Setup:</strong> {lobby.gameState.categories.length > 0 
-                    ? `${lobby.gameState.categories.length} categories configured`
-                    : "No categories configured"}
-                </p>
-                <p className="text-sm text-foreground">
-                  <strong>Players:</strong> {lobby.gameState.players.length} joined
-                </p>
+              <div className="bg-muted/50 p-4 rounded-lg border space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground mb-1">Game Setup Status:</p>
+                  {lobby.gameState.categories.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">
+                          {lobby.gameState.categories.length} {lobby.gameState.categories.length === 1 ? "Category" : "Categories"}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {lobby.gameState.categories.reduce((total: number, cat: any) => total + cat.questions.length, 0)} Questions
+                        </Badge>
+                        <Badge variant="default" className="bg-green-600">
+                          ✓ Ready to Start
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Categories: {lobby.gameState.categories.map((cat: any) => cat.name).join(", ")}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="destructive">⚠️ Not Configured</Badge>
+                      <span className="text-xs text-muted-foreground">Click "Setup Game" to add categories</span>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="border-t pt-3">
+                  <p className="text-sm font-semibold text-foreground mb-1">Players in Lobby:</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">
+                      {lobby.gameState.players.length} {lobby.gameState.players.length === 1 ? "Player" : "Players"}
+                    </Badge>
+                    {lobby.gameState.players.length > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        {lobby.gameState.players.map((p: any) => p.name).join(", ")}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-3">
