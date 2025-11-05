@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Bell, Trophy, Users, LogOut, AlertCircle, Keyboard } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const [alertMessage, setAlertMessage] = useState("");
   const lastBuzzerCountRef = useRef(0);
   const justBuzzedLocallyRef = useRef(false);
+  const [lobbyName, setLobbyName] = useState("");
 
   useEffect(() => {
     const savedPlayerId = localStorage.getItem("jeopardy_player_id");
@@ -80,6 +82,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     if (response.ok) {
       setGameState(data.gameState);
       setCurrentVersion(data.version || 0);
+      setLobbyName(data.lobbyName || "");
       checkBuzzerStatus(data.gameState);
     }
   };
@@ -210,13 +213,18 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
       <div className="max-w-[1800px] mx-auto">
         {/* Compact Header */}
         <div className="mb-3 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
-              POOR MAN&apos;S JEOPARDY
-            </h1>
-            <p className="text-sm text-gray-400">
-              <span className="font-semibold">{playerName}</span> • {resolvedParams.code}
-            </p>
+          <div className="flex items-center gap-2">
+            <div className="bg-card/60 backdrop-blur-md border border-border px-4 py-2 rounded-lg">
+              <h1 className="text-xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>
+                {lobbyName || `Lobby ${resolvedParams.code}`}
+              </h1>
+            </div>
+            <Badge variant="secondary" className="px-2 py-1 text-xs">
+              {playerName}
+            </Badge>
+            <Badge variant="outline" className="px-2 py-1 text-xs font-mono">
+              {resolvedParams.code}
+            </Badge>
           </div>
           <Button onClick={leaveGame} variant="outline" size="sm">
             <LogOut className="mr-2 h-4 w-4" />

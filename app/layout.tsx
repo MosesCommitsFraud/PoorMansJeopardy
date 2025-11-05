@@ -26,8 +26,8 @@ export default function RootLayout({
             enableMouseInteraction={false}
             colorNum={6}
             waveAmplitude={0.3}
-            waveFrequency={4}
-            waveSpeed={0.03}
+            waveFrequency={5}
+            waveSpeed={0.02}
           />
         </div>
         {children}

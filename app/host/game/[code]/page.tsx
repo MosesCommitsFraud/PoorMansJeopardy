@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Bell, BellOff, Trophy, Plus, Minus, XCircle, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +30,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   const lastBuzzerCountRef = useRef(0);
+  const [lobbyName, setLobbyName] = useState("");
 
   useEffect(() => {
     loadGameState();
@@ -58,6 +60,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     if (response.ok) {
       setGameState(data.gameState);
       setCurrentVersion(data.version || 0);
+      setLobbyName(data.lobbyName || "");
       
       if (data.gameState.currentQuestion) {
         setSelectedQuestion(data.gameState.currentQuestion);
@@ -251,9 +254,18 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         {/* Header */}
         <div className="mb-6">
           <div className="flex justify-between items-center">
-            <div className="text-center flex-1">
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-2 tracking-wider">POOR MAN&apos;S JEOPARDY</h1>
-              <p className="text-gray-300">Host View - Lobby: <span className="font-mono font-bold text-yellow-400">{resolvedParams.code}</span></p>
+            <div className="flex-1 flex items-center gap-3">
+              <div className="bg-card/60 backdrop-blur-md border border-border px-6 py-3 rounded-lg">
+                <h1 className="text-3xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>
+                  {lobbyName || `Lobby ${resolvedParams.code}`}
+                </h1>
+              </div>
+              <Badge variant="secondary" className="px-3 py-1 text-sm">
+                Host View
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1 text-sm font-mono">
+                {resolvedParams.code}
+              </Badge>
             </div>
             <Button onClick={endGame} variant="destructive" size="sm">
               <XCircle className="mr-2 h-4 w-4" />
@@ -274,7 +286,11 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   <div key={player.id} className="bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <Trophy className="h-5 w-5 text-yellow-400" />
-                      <div className="text-2xl font-bold">${player.score}</div>
+                      <div className={`text-2xl font-bold ${
+                        player.score > 0 ? 'text-green-500' : player.score < 0 ? 'text-red-500' : ''
+                      }`}>
+                        ${player.score}
+                      </div>
                     </div>
                     <div className="font-semibold">{player.name}</div>
                     <div className="flex gap-2 mt-2">
@@ -339,50 +355,52 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         </div>
 
         {/* Game Board */}
-        <div className="grid gap-2">
-          <div className="grid grid-cols-5 gap-2">
-            {gameState.categories.map((category) => (
-              <div key={category.id} className="bg-blue-600/30 backdrop-blur-sm border border-blue-400/30 p-4 text-center rounded-lg">
-                <h2 className="text-xl font-bold uppercase">{category.name}</h2>
+        <Card className="p-4">
+          <div className="grid gap-2">
+            <div className="grid grid-cols-5 gap-2">
+              {gameState.categories.map((category) => (
+                <div key={category.id} className="bg-blue-600/30 backdrop-blur-sm border border-blue-400/30 p-4 text-center rounded-lg">
+                  <h2 className="text-xl font-bold uppercase">{category.name}</h2>
+                </div>
+              ))}
+            </div>
+            
+            {[0, 1, 2, 3, 4].map((rowIndex) => (
+              <div key={rowIndex} className="grid grid-cols-5 gap-2">
+                {gameState.categories.map((category) => {
+                  const question = category.questions[rowIndex];
+                  return (
+                    <div key={question.id} className="relative">
+                      <button
+                        onClick={() => selectQuestion(category.id, question.id)}
+                        disabled={question.answered}
+                        className={`w-full p-8 text-3xl font-bold rounded-lg transition-all ${
+                          question.answered
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-white text-black hover:bg-gray-100 cursor-pointer shadow-md"
+                        }`}
+                      >
+                        {question.answered ? "" : `$${question.value}`}
+                      </button>
+                      
+                      {/* Reopen button for answered questions */}
+                      {question.answered && (
+                        <button
+                          onClick={() => reopenQuestion(category.id, question.id)}
+                          className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-blue-600/80 backdrop-blur-sm rounded-lg"
+                        >
+                          <span className="text-sm font-semibold text-white">
+                            ↩️ Reopen
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
-          
-          {[0, 1, 2, 3, 4].map((rowIndex) => (
-            <div key={rowIndex} className="grid grid-cols-5 gap-2">
-              {gameState.categories.map((category) => {
-                const question = category.questions[rowIndex];
-                return (
-                  <div key={question.id} className="relative">
-                    <button
-                      onClick={() => selectQuestion(category.id, question.id)}
-                      disabled={question.answered}
-                      className={`w-full p-8 text-3xl font-bold rounded-lg transition-all backdrop-blur-sm ${
-                        question.answered
-                          ? "bg-gray-800/30 border border-gray-600/20 text-gray-600 cursor-not-allowed"
-                          : "bg-blue-600/40 border border-blue-400/30 text-yellow-400 hover:bg-blue-500/50 hover:border-blue-300/40 cursor-pointer"
-                      }`}
-                    >
-                      {question.answered ? "" : `$${question.value}`}
-                    </button>
-                    
-                    {/* Reopen button for answered questions */}
-                    {question.answered && (
-                      <button
-                        onClick={() => reopenQuestion(category.id, question.id)}
-                        className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-blue-600/80 backdrop-blur-sm rounded-lg"
-                      >
-                        <span className="text-sm font-semibold text-white">
-                          ↩️ Reopen
-                        </span>
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+        </Card>
       </div>
 
       {/* Question Dialog */}
