@@ -1,8 +1,21 @@
 // Tenor API integration for GIF search
 // Documentation: https://tenor.com/gifapi/documentation#quickstart
 
-const TENOR_API_KEY = process.env.NEXT_PUBLIC_TENOR_API_KEY || 'AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ'; // Demo key, replace with your own
+const TENOR_API_KEY = process.env.NEXT_PUBLIC_TENOR_API_KEY || '';
 const TENOR_API_BASE = 'https://tenor.googleapis.com/v2';
+
+// Check if API key is loaded (for debugging)
+if (typeof window !== 'undefined') {
+  if (!TENOR_API_KEY) {
+    console.warn('⚠️ TENOR API KEY is not set. Please add NEXT_PUBLIC_TENOR_API_KEY to your .env.local file');
+  } else {
+    // Show first/last 4 characters to verify it's loading correctly
+    const masked = TENOR_API_KEY.length > 8 
+      ? `${TENOR_API_KEY.slice(0, 4)}...${TENOR_API_KEY.slice(-4)} (length: ${TENOR_API_KEY.length})`
+      : '(too short)';
+    console.log('🔑 Tenor API key loaded:', masked);
+  }
+}
 
 export interface TenorGif {
   id: string;
@@ -57,7 +70,9 @@ export async function searchTenorGifs(
   const response = await fetch(`${TENOR_API_BASE}/search?${params.toString()}`);
   
   if (!response.ok) {
-    throw new Error('Failed to search Tenor GIFs');
+    const errorText = await response.text();
+    console.error('Tenor API error:', response.status, errorText);
+    throw new Error(`Failed to search Tenor GIFs: ${response.status} ${errorText}`);
   }
 
   return await response.json();
@@ -75,7 +90,9 @@ export async function getTrendingGifs(limit: number = 20): Promise<TenorSearchRe
   const response = await fetch(`${TENOR_API_BASE}/featured?${params.toString()}`);
   
   if (!response.ok) {
-    throw new Error('Failed to get trending GIFs');
+    const errorText = await response.text();
+    console.error('Tenor API error:', response.status, errorText);
+    throw new Error(`Failed to get trending GIFs: ${response.status} ${errorText}`);
   }
 
   return await response.json();
@@ -93,7 +110,9 @@ export async function getTenorAutocomplete(query: string): Promise<string[]> {
   const response = await fetch(`${TENOR_API_BASE}/autocomplete?${params.toString()}`);
   
   if (!response.ok) {
-    throw new Error('Failed to get autocomplete suggestions');
+    const errorText = await response.text();
+    console.error('Tenor API error:', response.status, errorText);
+    throw new Error(`Failed to get autocomplete suggestions: ${response.status} ${errorText}`);
   }
 
   const data = await response.json();
