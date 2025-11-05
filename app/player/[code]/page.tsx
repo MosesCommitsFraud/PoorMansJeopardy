@@ -226,7 +226,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
               {resolvedParams.code}
             </Badge>
           </div>
-          <Button onClick={leaveGame} variant="outline" size="sm">
+          <Button onClick={leaveGame} variant="destructive" size="sm">
             <LogOut className="mr-2 h-4 w-4" />
             Leave
           </Button>
