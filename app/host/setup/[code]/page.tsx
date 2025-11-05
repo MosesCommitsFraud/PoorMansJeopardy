@@ -395,14 +395,14 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
           <div className="flex gap-2 flex-wrap">
             <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline" size="sm">
               <ArrowLeft className="mr-1 h-3 w-3" />
-              Back
+              Back to Lobby
             </Button>
             
             {/* Template Actions */}
             {templates.length > 0 && (
               <Select onValueChange={loadTemplate}>
-                <SelectTrigger className="w-[140px] h-9 text-sm">
-                  <SelectValue placeholder="Templates..." />
+                <SelectTrigger className="w-[160px] h-9 text-sm">
+                  <SelectValue placeholder="Load Template..." />
                 </SelectTrigger>
                 <SelectContent>
                   {templates.map(template => (
@@ -416,13 +416,13 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             
             <Button onClick={openSaveTemplateDialog} variant="outline" size="sm">
               <BookTemplate className="mr-1 h-3 w-3" />
-              Save
+              Save Template
             </Button>
             
             {templates.length > 0 && (
               <Button onClick={() => setShowManageDialog(true)} variant="outline" size="sm">
                 <FolderOpen className="mr-1 h-3 w-3" />
-                Manage
+                Manage Templates
               </Button>
             )}
             
@@ -433,21 +433,21 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
               disabled={isGenerating}
             >
               <Database className="mr-1 h-3 w-3" />
-              {isGenerating ? "Loading..." : "Browse"}
+              {isGenerating ? "Loading..." : "Browse Dataset"}
             </Button>
 
             <Button onClick={loadDefaultGame} variant="outline" size="sm" disabled={isGenerating}>
-              {isGenerating ? "Loading..." : "Random"}
+              {isGenerating ? "Loading..." : "Random Game"}
             </Button>
             
             <Button onClick={addCategory} variant="secondary" size="sm">
               <Plus className="mr-1 h-3 w-3" />
-              Add
+              Add Category
             </Button>
             
             <Button onClick={saveGame} size="sm">
               <Save className="mr-1 h-3 w-3" />
-              Save
+              Save Game
             </Button>
           </div>
         </div>
