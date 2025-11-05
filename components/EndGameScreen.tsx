@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Crown, Trophy, Medal, Home, Power } from "lucide-react";
+import ShinyText from "./ShinyText";
 
 interface EndGameScreenProps {
   players: Player[];
@@ -145,10 +146,10 @@ export function EndGameScreen({ players, lobbyCode, isHost, onReturnToLobby, onC
 
         {/* Player waiting message */}
         {!isHost && (
-          <div className="text-center">
-            <p className="text-lg text-muted-foreground">
-              Waiting for host to return to lobby...
-            </p>
+          <div className="flex justify-center">
+            <Badge variant="secondary" className="px-6 py-3 text-lg backdrop-blur-md">
+              <ShinyText text="Waiting for host to return to lobby..." speed={3} />
+            </Badge>
           </div>
         )}
 
