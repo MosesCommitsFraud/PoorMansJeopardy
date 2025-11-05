@@ -3,25 +3,30 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Crown, Users } from "lucide-react";
+import ShinyText from "@/components/ShinyText";
 
 export default function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-5xl mx-auto">
-        <div className="text-center mb-12 space-y-4">
-          <h1 className="text-6xl md:text-7xl font-black tracking-tight">
-            <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-purple-400 dark:to-blue-400">
-              POOR MAN'S
-            </span>
-            <br />
-            <span className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 bg-clip-text text-transparent dark:from-purple-400 dark:via-pink-400 dark:to-purple-400">
-              JEOPARDY
-            </span>
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Create custom trivia games and challenge your friends
-          </p>
+        <div className="text-center mb-12 space-y-6">
+          {/* Logo placeholder - add your SVG here */}
+          <div className="h-[200px] flex items-center justify-center">
+            {/* Your SVG logo will go here */}
+          </div>
+          
+          {/* Shiny subtext in frosted glass chip */}
+          <div className="flex justify-center">
+            <Badge variant="secondary" className="px-6 py-3 text-lg backdrop-blur-md">
+              <ShinyText 
+                text="Create custom trivia games and challenge your friends" 
+                disabled={false} 
+                speed={3}
+              />
+            </Badge>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
