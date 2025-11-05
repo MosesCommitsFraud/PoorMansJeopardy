@@ -219,10 +219,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 {lobbyName || `Lobby ${resolvedParams.code}`}
               </h1>
             </div>
-            <Badge variant="secondary" className="px-2 py-1 text-xs">
+            <Badge variant="secondary" className="px-2 py-1 text-xs backdrop-blur-md">
               {playerName}
             </Badge>
-            <Badge variant="outline" className="px-2 py-1 text-xs font-mono">
+            <Badge variant="outline" className="px-2 py-1 text-xs font-mono backdrop-blur-md">
               {resolvedParams.code}
             </Badge>
           </div>
@@ -313,7 +313,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                     {/* Category Headers */}
                     <div className="grid grid-cols-5 gap-2">
                       {gameState.categories.map((category) => (
-                        <div key={category.id} className="bg-gray-600 p-3 text-center rounded">
+                        <div key={category.id} className="bg-gray-600 p-3 text-center rounded backdrop-blur-md">
                           <h2 className="text-sm font-bold uppercase truncate text-white">{category.name}</h2>
                         </div>
                       ))}
@@ -327,7 +327,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                           return (
                             <div
                               key={question.id}
-                              className={`aspect-video flex items-center justify-center text-3xl font-bold rounded text-center ${
+                              className={`aspect-video flex items-center justify-center text-3xl font-bold rounded text-center backdrop-blur-md ${
                                 question.answered
                                   ? "bg-white/10 text-gray-500"
                                   : "bg-primary text-primary-foreground"
@@ -361,10 +361,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                     .map((player, index) => (
                       <div 
                         key={player.id}
-                        className={`p-2 rounded-lg ${
+                        className={`p-2 rounded-lg backdrop-blur-sm border border-white/20 p-4 ${
                           player.id === playerId 
-                            ? "bg-gray-600 border-2 border-white/30" 
-                            : "bg-gray-700 border border-white/20"
                         }`}
                       >
                         <div className="space-y-1">

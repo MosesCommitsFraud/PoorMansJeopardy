@@ -260,10 +260,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   {lobbyName || `Lobby ${resolvedParams.code}`}
                 </h1>
               </div>
-              <Badge variant="secondary" className="px-3 py-1 text-sm">
+              <Badge variant="secondary" className="px-3 py-1 text-sm backdrop-blur-md">
                 Host View
               </Badge>
-              <Badge variant="outline" className="px-3 py-1 text-sm font-mono">
+              <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
                 {resolvedParams.code}
               </Badge>
             </div>
@@ -283,7 +283,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {gameState.players.map((player) => (
-                  <div key={player.id} className="bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-lg">
+                  <div key={player.id} className="backdrop-blur-sm border border-white/20 p-4 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <Trophy className="h-5 w-5 text-yellow-400" />
                       <div className={`text-2xl font-bold ${
@@ -359,7 +359,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
           <div className="grid gap-2">
             <div className="grid grid-cols-5 gap-2">
               {gameState.categories.map((category) => (
-                <div key={category.id} className="bg-gray-700 p-4 text-center rounded-lg">
+                <div key={category.id} className="bg-gray-700 p-4 text-center rounded-lg backdrop-blur-md">
                   <h2 className="text-xl font-bold uppercase text-white">{category.name}</h2>
                 </div>
               ))}
@@ -374,7 +374,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                       <button
                         onClick={() => selectQuestion(category.id, question.id)}
                         disabled={question.answered}
-                        className={`w-full p-8 text-3xl font-bold rounded-lg transition-all ${
+                        className={`w-full p-8 text-3xl font-bold rounded-lg transition-all backdrop-blur-md ${
                           question.answered
                             ? "bg-white/10 text-gray-500 cursor-not-allowed"
                             : "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-md"
