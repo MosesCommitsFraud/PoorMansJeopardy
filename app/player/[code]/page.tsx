@@ -347,7 +347,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                                   : "bg-primary/80 text-primary-foreground border-white/20"
                               }`}
                             >
-                              {question.answered ? "" : `$${question.value}`}
+                              ${question.value}
                             </div>
                           );
                         })}
