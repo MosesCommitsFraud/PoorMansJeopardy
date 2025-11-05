@@ -359,8 +359,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
           <div className="grid gap-2">
             <div className="grid grid-cols-5 gap-2">
               {gameState.categories.map((category) => (
-                <div key={category.id} className="bg-blue-600/30 backdrop-blur-sm border border-blue-400/30 p-4 text-center rounded-lg">
-                  <h2 className="text-xl font-bold uppercase">{category.name}</h2>
+                <div key={category.id} className="bg-gray-700 p-4 text-center rounded-lg">
+                  <h2 className="text-xl font-bold uppercase text-white">{category.name}</h2>
                 </div>
               ))}
             </div>
@@ -376,8 +376,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                         disabled={question.answered}
                         className={`w-full p-8 text-3xl font-bold rounded-lg transition-all ${
                           question.answered
-                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            : "bg-white text-black hover:bg-gray-100 cursor-pointer shadow-md"
+                            ? "bg-white/10 text-gray-500 cursor-not-allowed"
+                            : "bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-md"
                         }`}
                       >
                         {question.answered ? "" : `$${question.value}`}

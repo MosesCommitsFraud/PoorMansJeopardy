@@ -241,7 +241,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 <div className={`px-4 py-2 rounded-full text-sm font-bold backdrop-blur-sm border ${
                   gameState?.buzzerActive ? "bg-green-500/50 border-green-400/50 text-white animate-pulse" : "bg-gray-500/30 border-gray-400/30 text-gray-400"
                 }`}>
-                  {gameState?.buzzerActive ? "🔔 BUZZER ACTIVE" : "🔕 BUZZER INACTIVE"}
+                  {gameState?.buzzerActive ? "BUZZER ACTIVE" : "BUZZER INACTIVE"}
                 </div>
                 
                 {hasBuzzed && (
@@ -299,11 +299,6 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 </div>
               </CardContent>
             </Card>
-
-            {/* Tab Focus Reminder */}
-            <div className="text-[9px] text-center text-gray-500 bg-gray-800/30 backdrop-blur-sm border border-gray-700/30 rounded p-1.5 leading-tight">
-              💡 Keep focused
-            </div>
           </div>
 
           {/* Center Column: Game Board */}
@@ -318,8 +313,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                     {/* Category Headers */}
                     <div className="grid grid-cols-5 gap-2">
                       {gameState.categories.map((category) => (
-                        <div key={category.id} className="bg-blue-600/30 backdrop-blur-sm border border-blue-400/30 p-3 text-center rounded">
-                          <h2 className="text-sm font-bold uppercase truncate">{category.name}</h2>
+                        <div key={category.id} className="bg-gray-600 p-3 text-center rounded">
+                          <h2 className="text-sm font-bold uppercase truncate text-white">{category.name}</h2>
                         </div>
                       ))}
                     </div>
@@ -332,10 +327,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                           return (
                             <div
                               key={question.id}
-                              className={`aspect-video flex items-center justify-center text-3xl font-bold rounded text-center backdrop-blur-sm ${
+                              className={`aspect-video flex items-center justify-center text-3xl font-bold rounded text-center ${
                                 question.answered
-                                  ? "bg-gray-800/30 border border-gray-600/20 text-gray-600"
-                                  : "bg-blue-600/40 border border-blue-400/30 text-yellow-400"
+                                  ? "bg-white/10 text-gray-500"
+                                  : "bg-primary text-primary-foreground"
                               }`}
                             >
                               {question.answered ? "" : `$${question.value}`}
@@ -366,10 +361,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                     .map((player, index) => (
                       <div 
                         key={player.id}
-                        className={`p-2 rounded-lg backdrop-blur-sm ${
+                        className={`p-2 rounded-lg ${
                           player.id === playerId 
-                            ? "bg-blue-500/30 border-2 border-blue-400/50" 
-                            : "bg-white/10 border border-white/20"
+                            ? "bg-gray-600 border-2 border-white/30" 
+                            : "bg-gray-700 border border-white/20"
                         }`}
                       >
                         <div className="space-y-1">
@@ -377,15 +372,17 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                             <div className={`text-base font-bold ${
                               index === 0 ? "text-yellow-400" : 
                               index === 1 ? "text-gray-300" : 
-                              index === 2 ? "text-orange-400" : "text-gray-500"
+                              index === 2 ? "text-orange-400" : "text-gray-400"
                             }`}>
                               #{index + 1}
                             </div>
-                            <div className="text-base font-bold">
+                            <div className={`text-base font-bold ${
+                              player.score > 0 ? 'text-green-500' : player.score < 0 ? 'text-red-500' : 'text-white'
+                            }`}>
                               ${player.score}
                             </div>
                           </div>
-                          <div className="font-semibold text-xs truncate">
+                          <div className="font-semibold text-xs truncate text-white">
                             {player.name}
                             {player.id === playerId && (
                               <span className="ml-1 text-[10px] text-blue-400">(You)</span>
