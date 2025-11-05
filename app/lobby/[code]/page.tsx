@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle, AlertCircle, Edit2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@heroui/spinner";
 import { 
   AlertDialog, 
@@ -260,66 +261,73 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   return (
     <main className="min-h-screen p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold mb-4 tracking-wider bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-purple-400 dark:to-blue-400">
-            POOR MAN&apos;S JEOPARDY
-          </h1>
-          
-          {/* Lobby Name */}
-          {!editingName && (
-            <div className="flex items-center justify-center gap-2">
-              <h2 className="text-2xl font-semibold">
-                {lobbyName || `Lobby ${resolvedParams.code}`}
-              </h2>
-              {isHost && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setEditingName(true);
-                    setLobbyName("");
-                  }}
-                  className="hover:bg-accent"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </Button>
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 flex items-center gap-3 flex-wrap">
+              {/* Lobby Name */}
+              {!editingName ? (
+                <>
+                  <div className="bg-card/60 backdrop-blur-md border border-border px-6 py-3 rounded-lg flex items-center gap-2">
+                    <h1 className="text-3xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>
+                      {lobbyName || `Lobby ${resolvedParams.code}`}
+                    </h1>
+                    {isHost && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingName(true);
+                          setLobbyName(lobby?.lobbyName || "");
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="px-3 py-1 text-sm backdrop-blur-md">
+                    {isHost ? "Host View" : playerName}
+                  </Badge>
+                  <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
+                    {resolvedParams.code}
+                  </Badge>
+                </>
+              ) : (
+                /* Edit Lobby Name (Host Only) */
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={lobbyName}
+                    onChange={(e) => setLobbyName(e.target.value)}
+                    placeholder="Edit lobby name"
+                    className="max-w-md"
+                    maxLength={50}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") updateLobbyName();
+                      if (e.key === "Escape") {
+                        setEditingName(false);
+                        setLobbyName(lobby?.lobbyName || "");
+                      }
+                    }}
+                  />
+                  <Button onClick={updateLobbyName} size="sm">
+                    <Check className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setEditingName(false);
+                      setLobbyName(lobby?.lobbyName || "");
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <XCircle className="w-4 h-4" />
+                  </Button>
+                </div>
               )}
             </div>
-          )}
-          
-          {/* Edit Lobby Name (Host Only) */}
-          {editingName && (
-            <div className="flex items-center justify-center gap-2 max-w-md mx-auto mb-2">
-              <Input
-                value={lobbyName}
-                onChange={(e) => setLobbyName(e.target.value)}
-                placeholder="edit lobby name"
-                className="text-center"
-                maxLength={50}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") updateLobbyName();
-                  if (e.key === "Escape") {
-                    setEditingName(false);
-                    setLobbyName(lobby?.lobbyName || "");
-                  }
-                }}
-              />
-              <Button onClick={updateLobbyName} size="sm">
-                <Check className="w-4 h-4" />
-              </Button>
-              <Button
-                onClick={() => {
-                  setEditingName(false);
-                  setLobbyName(lobby?.lobbyName || "");
-                }}
-                variant="outline"
-                size="sm"
-              >
-                <XCircle className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Lobby Code Card */}
