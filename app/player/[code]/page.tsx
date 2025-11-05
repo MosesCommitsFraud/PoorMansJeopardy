@@ -434,24 +434,34 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
             <div className="text-2xl font-bold text-blue-400 mb-6">
               ${gameState?.currentQuestion?.value}
             </div>
-            <div className="text-5xl md:text-6xl font-bold leading-tight px-8">
+            <div className={`font-bold leading-tight px-8 transition-all ${
+              gameState?.showAnswerToPlayers 
+                ? 'text-2xl md:text-3xl' 
+                : 'text-5xl md:text-6xl'
+            }`}>
               {gameState?.currentQuestion?.question}
             </div>
             {gameState?.currentQuestion?.questionImageUrl && (
-              <div className="mt-8">
+              <div className={`transition-all ${
+                gameState?.showAnswerToPlayers ? 'mt-4' : 'mt-8'
+              }`}>
                 <img 
                   src={gameState.currentQuestion.questionImageUrl} 
                   alt="Question" 
-                  className="max-w-full max-h-96 rounded-lg mx-auto"
+                  className={`rounded-lg mx-auto ${
+                    gameState?.showAnswerToPlayers 
+                      ? 'max-w-full max-h-48' 
+                      : 'max-w-full max-h-96'
+                  }`}
                 />
               </div>
             )}
             
             {/* Show Answer if host enabled it */}
             {gameState?.showAnswerToPlayers && (
-              <div className="mt-12 pt-8 border-t-4 border-green-400/50">
+              <div className="mt-8 pt-6 border-t-4 border-green-400/50">
                 <div className="text-2xl font-bold text-green-400 mb-4">ANSWER:</div>
-                <div className="text-4xl md:text-5xl font-bold text-green-300">
+                <div className="text-5xl md:text-6xl font-bold text-green-300">
                   {gameState?.currentQuestion?.answer}
                 </div>
                 {gameState?.currentQuestion?.answerImageUrl && (

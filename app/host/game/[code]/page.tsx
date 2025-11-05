@@ -354,55 +354,6 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
           </Card>
         </div>
 
-        {/* Buzzer Control */}
-        <div className="mb-6">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <Bell className="h-5 w-5" />
-                  <div className="text-sm font-semibold">Buzzer:</div>
-                  <div className={`px-3 py-1 rounded-full text-sm font-bold ${
-                    gameState.buzzerActive ? "bg-green-500 text-white" : "bg-gray-300 text-gray-600"
-                  }`}>
-                    {gameState.buzzerActive ? "ACTIVE" : "INACTIVE"}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={activateBuzzer} size="sm">
-                    <Bell className="mr-2 h-4 w-4" />
-                    Activate
-                  </Button>
-                  <Button onClick={deactivateBuzzer} variant="secondary" size="sm">
-                    <BellOff className="mr-2 h-4 w-4" />
-                    Deactivate
-                  </Button>
-                  <Button onClick={clearBuzzer} variant="outline" size="sm">
-                    Clear Queue
-                  </Button>
-                </div>
-              </div>
-              {(gameState?.buzzerQueue || []).length > 0 && (
-                <div className="mt-3 p-3 bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 rounded-lg">
-                  <div className="text-sm font-bold mb-2">
-                    Queue ({(gameState?.buzzerQueue || []).length}):
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {(gameState?.buzzerQueue || []).map((buzz, index) => (
-                      <div key={index} className="flex items-center gap-1.5 bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-full px-2 py-1">
-                        <span className="text-xs font-bold text-yellow-300">
-                          {index + 1}.
-                        </span>
-                        <span className="text-sm font-medium">{buzz.playerName}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Game Board */}
         <Card>
           <CardHeader>
