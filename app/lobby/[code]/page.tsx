@@ -24,7 +24,8 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const router = useRouter();
   const [lobby, setLobby] = useState<any>(null);
   const [isHost, setIsHost] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [error, setError] = useState("");
   const [currentVersion, setCurrentVersion] = useState(0);
   const [showAlert, setShowAlert] = useState(false);
@@ -107,14 +108,14 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const copyLink = () => {
     const link = `${window.location.origin}/lobby/join?code=${resolvedParams.code}`;
     navigator.clipboard.writeText(link);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const copyCode = () => {
     navigator.clipboard.writeText(resolvedParams.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
   };
 
   const goToSetup = () => {
@@ -339,11 +340,11 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
             </div>
             <div className="flex gap-2 justify-center">
               <Button onClick={copyCode} variant="secondary" size="sm">
-                {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                {copiedCode ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
                 Copy Code
               </Button>
               <Button onClick={copyLink} variant="secondary" size="sm">
-                <Copy className="mr-2 h-4 w-4" />
+                {copiedLink ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
                 Copy Link
               </Button>
             </div>
