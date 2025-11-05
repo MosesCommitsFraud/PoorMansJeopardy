@@ -144,42 +144,35 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   };
 
   const loadDefaultGame = async () => {
-    const defaultCategories: Category[] = [
-      {
-        id: "1",
-        name: "History",
-        questions: [
-          { id: "1-1", question: "This war lasted from 1939 to 1945", answer: "What is World War II?", value: 200, answered: false },
-          { id: "1-2", question: "This document was signed in 1776", answer: "What is the Declaration of Independence?", value: 400, answered: false },
-          { id: "1-3", question: "This president issued the Emancipation Proclamation", answer: "Who is Abraham Lincoln?", value: 600, answered: false },
-          { id: "1-4", question: "The Berlin Wall fell in this year", answer: "What is 1989?", value: 800, answered: false },
-          { id: "1-5", question: "This empire was ruled by Julius Caesar", answer: "What is the Roman Empire?", value: 1000, answered: false },
-        ]
-      },
-      {
-        id: "2",
-        name: "Science",
-        questions: [
-          { id: "2-1", question: "This is the chemical symbol for gold", answer: "What is Au?", value: 200, answered: false },
-          { id: "2-2", question: "This planet is known as the Red Planet", answer: "What is Mars?", value: 400, answered: false },
-          { id: "2-3", question: "This is the powerhouse of the cell", answer: "What is mitochondria?", value: 600, answered: false },
-          { id: "2-4", question: "This force keeps planets in orbit", answer: "What is gravity?", value: 800, answered: false },
-          { id: "2-5", question: "This scientist developed the theory of relativity", answer: "Who is Albert Einstein?", value: 1000, answered: false },
-        ]
-      },
-      {
-        id: "3",
-        name: "Geography",
-        questions: [
-          { id: "3-1", question: "This is the capital of France", answer: "What is Paris?", value: 200, answered: false },
-          { id: "3-2", question: "This is the longest river in the world", answer: "What is the Nile?", value: 400, answered: false },
-          { id: "3-3", question: "This is the largest continent", answer: "What is Asia?", value: 600, answered: false },
-          { id: "3-4", question: "This mountain is the tallest in the world", answer: "What is Mount Everest?", value: 800, answered: false },
-          { id: "3-5", question: "This is the smallest country in the world", answer: "What is Vatican City?", value: 1000, answered: false },
-        ]
-      },
-    ];
-    setCategories(defaultCategories);
+    setIsGenerating(true);
+    try {
+      // Load all questions from dataset
+      const allQuestions = await fetch('/api/questions/dataset').then(res => res.json());
+      
+      // Get unique categories (with at least 5 questions each)
+      const categoryMap = new Map<string, number>();
+      allQuestions.forEach((q: any) => {
+        const upperCategory = q.category.toUpperCase();
+        categoryMap.set(upperCategory, (categoryMap.get(upperCategory) || 0) + 1);
+      });
+      
+      const availableCategories = Array.from(categoryMap.entries())
+        .filter(([_, count]) => count >= 5)
+        .map(([name]) => name);
+      
+      // Randomly select 5 categories
+      const shuffled = availableCategories.sort(() => Math.random() - 0.5);
+      const selectedCategories = shuffled.slice(0, 5);
+      
+      // Generate categories using the existing function
+      const generatedCategories = await generateCategoriesFromDataset(selectedCategories);
+      setCategories(generatedCategories);
+    } catch (error) {
+      console.error('Error loading default game from dataset:', error);
+      alert('Failed to load default game. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const saveGame = async () => {
@@ -437,8 +430,8 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
               {isGenerating ? "Generating..." : "Browse Questions"}
             </Button>
 
-            <Button onClick={loadDefaultGame} variant="outline">
-              Load Default Game
+            <Button onClick={loadDefaultGame} variant="outline" disabled={isGenerating}>
+              {isGenerating ? "Loading..." : "Load Random Game"}
             </Button>
             
             <Button onClick={addCategory} variant="secondary">
