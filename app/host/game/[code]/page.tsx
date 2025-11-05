@@ -334,6 +334,12 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         playerWins[gameState.winnerId] = (playerWins[gameState.winnerId] || 0) + 1;
       }
 
+      // Reset all player scores to 0 for the next game
+      const resetPlayers = gameState.players.map(p => ({
+        ...p,
+        score: 0
+      }));
+
       // Reset game state back to lobby
       await updateGameState({
         gameStarted: false,
@@ -343,7 +349,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         buzzerQueue: [],
         showAnswerToPlayers: false,
         timerEndAt: null,
-        playerWins: playerWins
+        playerWins: playerWins,
+        players: resetPlayers
       });
 
       // Navigate back to lobby
