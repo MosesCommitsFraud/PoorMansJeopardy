@@ -382,7 +382,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-4xl font-bold text-white mb-2" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>Setup</h1>
             <p className="text-gray-300">Lobby Code: <span className="font-mono font-bold text-yellow-400">{resolvedParams.code}</span></p>
