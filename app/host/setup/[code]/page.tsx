@@ -384,20 +384,20 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">Poor Man&apos;s Jeopardy - Setup</h1>
+            <h1 className="text-4xl font-bold text-white mb-2" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>Setup</h1>
             <p className="text-gray-300">Lobby Code: <span className="font-mono font-bold text-yellow-400">{resolvedParams.code}</span></p>
           </div>
-          <div className="flex gap-3 flex-wrap">
-            <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Lobby
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline" size="sm">
+              <ArrowLeft className="mr-1 h-3 w-3" />
+              Back
             </Button>
             
             {/* Template Actions */}
             {templates.length > 0 && (
               <Select onValueChange={loadTemplate}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Load Template..." />
+                <SelectTrigger className="w-[140px] h-9 text-sm">
+                  <SelectValue placeholder="Templates..." />
                 </SelectTrigger>
                 <SelectContent>
                   {templates.map(template => (
@@ -409,39 +409,40 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
               </Select>
             )}
             
-            <Button onClick={openSaveTemplateDialog} variant="outline">
-              <BookTemplate className="mr-2 h-4 w-4" />
-              Save as Template
+            <Button onClick={openSaveTemplateDialog} variant="outline" size="sm">
+              <BookTemplate className="mr-1 h-3 w-3" />
+              Save
             </Button>
             
             {templates.length > 0 && (
-              <Button onClick={() => setShowManageDialog(true)} variant="outline">
-                <FolderOpen className="mr-2 h-4 w-4" />
-                Manage Templates
+              <Button onClick={() => setShowManageDialog(true)} variant="outline" size="sm">
+                <FolderOpen className="mr-1 h-3 w-3" />
+                Manage
               </Button>
             )}
             
             <Button 
               onClick={() => setShowCategoryBrowser(true)} 
               variant="outline" 
+              size="sm"
               disabled={isGenerating}
             >
-              <Database className="mr-2 h-4 w-4" />
-              {isGenerating ? "Generating..." : "Browse Questions"}
+              <Database className="mr-1 h-3 w-3" />
+              {isGenerating ? "Loading..." : "Browse"}
             </Button>
 
-            <Button onClick={loadDefaultGame} variant="outline" disabled={isGenerating}>
-              {isGenerating ? "Loading..." : "Load Random Game"}
+            <Button onClick={loadDefaultGame} variant="outline" size="sm" disabled={isGenerating}>
+              {isGenerating ? "Loading..." : "Random"}
             </Button>
             
-            <Button onClick={addCategory} variant="secondary">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Category
+            <Button onClick={addCategory} variant="secondary" size="sm">
+              <Plus className="mr-1 h-3 w-3" />
+              Add
             </Button>
             
-            <Button onClick={saveGame}>
-              <Save className="mr-2 h-4 w-4" />
-              Save & Continue
+            <Button onClick={saveGame} size="sm">
+              <Save className="mr-1 h-3 w-3" />
+              Save
             </Button>
           </div>
         </div>
