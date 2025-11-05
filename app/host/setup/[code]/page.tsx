@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X } from "lucide-react";
 import { Category, Question, GameTemplate } from "@/types/game";
 import { templateStorage } from "@/lib/template-storage";
@@ -383,9 +384,13 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-4">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>Setup</h1>
-            <p className="text-gray-300">Lobby Code: <span className="font-mono font-bold text-yellow-400">{resolvedParams.code}</span></p>
+          <div className="flex items-center gap-3">
+            <div className="bg-card/60 backdrop-blur-md border border-border px-6 py-3 rounded-lg">
+              <h1 className="text-2xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>Setup</h1>
+            </div>
+            <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
+              {resolvedParams.code}
+            </Badge>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline" size="sm">
@@ -474,7 +479,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                   {category.questions.map((question) => (
                     <div key={question.id} className="grid grid-cols-12 gap-4 p-4 border rounded-lg">
                       <div className="col-span-1 flex items-center">
-                        <div className="text-lg font-bold text-blue-600">
+                        <div className="text-lg font-bold text-white">
                           ${question.value}
                         </div>
                       </div>

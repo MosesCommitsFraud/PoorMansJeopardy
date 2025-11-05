@@ -41,6 +41,22 @@ export function GifPicker({
     }
   }, [open]);
 
+  // Debounced search effect - automatically search 1 second after typing stops
+  useEffect(() => {
+    if (!open) return;
+    
+    const timeoutId = setTimeout(() => {
+      if (searchTerm.trim()) {
+        handleSearch(searchTerm);
+      } else if (searchTerm === "" && currentSearchTerm !== "") {
+        // If search term is cleared, show trending
+        loadTrendingGifs();
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, open]);
+
   const loadTrendingGifs = async () => {
     setIsLoading(true);
     try {
@@ -74,11 +90,6 @@ export function GifPicker({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch(searchTerm);
-    }
-  };
 
   const handleSelectGif = (gif: TenorGif) => {
     setSelectedGif(gif);
@@ -122,39 +133,29 @@ export function GifPicker({
           {/* Search Bar */}
           <div className="space-y-2">
             <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              {isLoading ? (
+                <Loader2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              )}
               <Input
                 placeholder="Search Tenor..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="pl-10 pr-24"
+                className="pl-10 pr-10"
               />
-              <div className="absolute right-2 top-2 flex gap-2">
-                {searchTerm && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setSearchTerm("");
-                      loadTrendingGifs();
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+              {searchTerm && (
                 <Button
                   size="sm"
-                  onClick={() => handleSearch(searchTerm)}
-                  disabled={isLoading}
+                  variant="ghost"
+                  onClick={() => {
+                    setSearchTerm("");
+                  }}
+                  className="absolute right-1 top-1 h-8 w-8 p-0"
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
+                  <X className="h-4 w-4" />
                 </Button>
-              </div>
+              )}
             </div>
 
             <Button
