@@ -422,32 +422,32 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             {templates.length > 0 && (
               <Button onClick={() => setShowManageDialog(true)} variant="outline" size="sm">
                 <FolderOpen className="mr-1 h-3 w-3" />
-                Manage Templates
+                Templates
               </Button>
             )}
-            
-            <Button 
-              onClick={() => setShowCategoryBrowser(true)} 
-              variant="outline" 
+
+            <Button
+              onClick={() => setShowCategoryBrowser(true)}
+              variant="outline"
               size="sm"
               disabled={isGenerating}
             >
               <Database className="mr-1 h-3 w-3" />
-              {isGenerating ? "Loading..." : "Browse Dataset"}
+              {isGenerating ? "Loading..." : "Browse"}
             </Button>
 
             <Button onClick={loadDefaultGame} variant="outline" size="sm" disabled={isGenerating}>
-              {isGenerating ? "Loading..." : "Random Game"}
+              {isGenerating ? "Loading..." : "Random"}
             </Button>
-            
+
             <Button onClick={addCategory} variant="secondary" size="sm">
               <Plus className="mr-1 h-3 w-3" />
               Add Category
             </Button>
-            
+
             <Button onClick={saveGame} size="sm">
               <Save className="mr-1 h-3 w-3" />
-              Save Game
+              Save
             </Button>
           </div>
         </div>
