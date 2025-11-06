@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@heroui/spinner";
 import { Users, Lock, ArrowLeft, AlertCircle } from "lucide-react";
 
-export default function JoinLobby() {
+function JoinLobbyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [code, setCode] = useState("");
@@ -210,6 +210,22 @@ export default function JoinLobby() {
         </Card>
       </div>
     </main>
+  );
+}
+
+export default function JoinLobby() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center p-4">
+        <Card className="shadow-2xl w-full max-w-md">
+          <CardContent className="flex items-center justify-center py-20">
+            <Spinner size="lg" />
+          </CardContent>
+        </Card>
+      </main>
+    }>
+      <JoinLobbyContent />
+    </Suspense>
   );
 }
 
