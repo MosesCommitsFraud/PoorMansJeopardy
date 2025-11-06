@@ -391,7 +391,9 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
                         <div className="font-semibold text-foreground flex items-center gap-2">
                           {player.name}
                           {isWinner && (
-                            <Crown className="w-4 h-4 text-yellow-500" title="Last Game Winner" />
+                            <span title="Last Game Winner">
+                              <Crown className="w-4 h-4 text-yellow-500" />
+                            </span>
                           )}
                           {winCount > 0 && (
                             <Badge variant="secondary" className="text-xs px-2 py-0.5">
