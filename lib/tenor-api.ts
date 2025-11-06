@@ -79,7 +79,7 @@ export async function searchTenorGifs(
 }
 
 // Get trending GIFs
-export async function getTrendingGifs(limit: number = 20): Promise<TenorSearchResponse> {
+export async function getTrendingGifs(limit: number = 20, pos?: string): Promise<TenorSearchResponse> {
   const params = new URLSearchParams({
     key: TENOR_API_KEY,
     client_key: 'jeopardy_game',
@@ -87,8 +87,12 @@ export async function getTrendingGifs(limit: number = 20): Promise<TenorSearchRe
     media_filter: 'gif,tinygif',
   });
 
+  if (pos) {
+    params.append('pos', pos);
+  }
+
   const response = await fetch(`${TENOR_API_BASE}/featured?${params.toString()}`);
-  
+
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Tenor API error:', response.status, errorText);

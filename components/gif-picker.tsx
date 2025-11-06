@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,8 +26,10 @@ export function GifPicker({
   const [searchTerm, setSearchTerm] = useState("");
   const [currentSearchTerm, setCurrentSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [nextPos, setNextPos] = useState<string | undefined>();
   const [selectedGif, setSelectedGif] = useState<TenorGif | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -89,6 +91,36 @@ export function GifPicker({
       setIsLoading(false);
     }
   };
+
+  const loadMoreGifs = useCallback(async () => {
+    if (!nextPos || isLoadingMore || isLoading) return;
+
+    setIsLoadingMore(true);
+    try {
+      const response = currentSearchTerm
+        ? await searchTenorGifs(currentSearchTerm, 30, nextPos)
+        : await getTrendingGifs(30, nextPos);
+
+      setGifs(prev => [...prev, ...response.results]);
+      setNextPos(response.next);
+    } catch (error) {
+      console.error('Error loading more GIFs:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [nextPos, isLoadingMore, isLoading, currentSearchTerm]);
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+    // Load more when scrolled to 80% of the content
+    if (scrollPercentage > 0.8) {
+      loadMoreGifs();
+    }
+  }, [loadMoreGifs]);
 
 
   const handleSelectGif = (gif: TenorGif) => {
@@ -195,7 +227,15 @@ export function GifPicker({
           )}
 
           {/* GIF Grid */}
-          <div className="flex-1 overflow-y-auto">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto scrollbar-frosted"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05)',
+            }}
+          >
             {isLoading ? (
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                 {[...Array(20)].map((_, i) => (
@@ -207,38 +247,45 @@ export function GifPicker({
                 No GIFs found
               </div>
             ) : (
-              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 pb-4">
-                {gifs.map((gif) => {
-                  const isSelected = selectedGif?.id === gif.id;
-                  return (
-                    <button
-                      key={gif.id}
-                      onClick={() => handleSelectGif(gif)}
-                      className={`
-                        relative aspect-square overflow-hidden rounded-lg border-2 transition-all hover:scale-105
-                        ${isSelected 
-                          ? 'border-green-500 ring-2 ring-green-500/50' 
-                          : 'border-white/10 hover:border-white/30'
-                        }
-                      `}
-                    >
-                      <img
-                        src={getGifPreviewUrl(gif)}
-                        alt={gif.content_description}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                      {isSelected && (
-                        <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
-                          <div className="bg-green-500 text-white rounded-full p-2">
-                            ✓
+              <>
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 pb-4">
+                  {gifs.map((gif) => {
+                    const isSelected = selectedGif?.id === gif.id;
+                    return (
+                      <button
+                        key={gif.id}
+                        onClick={() => handleSelectGif(gif)}
+                        className={`
+                          relative aspect-square overflow-hidden rounded-lg border-2 transition-all hover:scale-105
+                          ${isSelected
+                            ? 'border-green-500 ring-2 ring-green-500/50'
+                            : 'border-white/10 hover:border-white/30'
+                          }
+                        `}
+                      >
+                        <img
+                          src={getGifPreviewUrl(gif)}
+                          alt={gif.content_description}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        {isSelected && (
+                          <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+                            <div className="bg-green-500 text-white rounded-full p-2">
+                              ✓
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {isLoadingMore && (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </>
             )}
           </div>
 
