@@ -8,7 +8,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Poor Man's Jeopardy",
-  description: "Interactive Jeopardy game with host and player views",
+  description: "Just a Jeopardy game, but for free.",
+  icons: {
+    icon: '/PMJLogoSmall.svg',
+  },
 };
 
 export default function RootLayout({
