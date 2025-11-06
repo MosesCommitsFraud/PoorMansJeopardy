@@ -12,14 +12,21 @@ if (!global.localLobbyStore) {
   global.localLobbyStore = localStore;
 }
 
-// Check if we're in Vercel environment
-const isVercel = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
+// Check if we're in Vercel environment (support both old and new variable names)
+const hasOldKV = process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN;
+const hasNewUpstash = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
+const isVercel = hasOldKV || hasNewUpstash;
 
 let kv: any = null;
 
 // Initialize KV only on server side and when available
 if (typeof window === "undefined" && isVercel) {
   try {
+    // If using new Upstash variables, set them for @vercel/kv compatibility
+    if (hasNewUpstash && !hasOldKV) {
+      process.env.KV_REST_API_URL = process.env.UPSTASH_REDIS_REST_URL;
+      process.env.KV_REST_API_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+    }
     kv = require("@vercel/kv").kv;
   } catch (error) {
     console.log("Vercel KV not available, using local storage");
