@@ -231,10 +231,6 @@ export function GifPicker({
             ref={scrollRef}
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto scrollbar-frosted pr-3"
-            style={{
-              scrollbarWidth: 'auto',
-              scrollbarColor: 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.08)',
-            }}
           >
             {isLoading ? (
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">

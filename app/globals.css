@@ -99,37 +99,39 @@ button:disabled {
   animation: shine 5s linear infinite;
 }
 
-/* Frosted glass scrollbar */
-.scrollbar-frosted {
-  scrollbar-gutter: stable;
+/* Frosted glass scrollbar - Global styles */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
 }
 
-.scrollbar-frosted::-webkit-scrollbar {
+*::-webkit-scrollbar {
   width: 16px;
-  position: absolute;
-  z-index: 10;
+  height: 16px;
 }
 
-.scrollbar-frosted::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(12px);
-  border-radius: 8px;
-  margin: 4px 0;
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.scrollbar-frosted::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(12px);
   border-radius: 8px;
   border: 2px solid rgba(255, 255, 255, 0.15);
 }
 
-.scrollbar-frosted::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.35);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.scrollbar-frosted::-webkit-scrollbar-thumb:active {
+*::-webkit-scrollbar-thumb:active {
   background: rgba(255, 255, 255, 0.45);
   border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Specific class for elements that need stable gutter */
+.scrollbar-frosted {
+  scrollbar-gutter: stable;
 }
