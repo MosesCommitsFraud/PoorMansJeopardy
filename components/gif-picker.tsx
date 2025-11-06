@@ -230,10 +230,10 @@ export function GifPicker({
           <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className="flex-1 overflow-y-auto scrollbar-frosted"
+            className="flex-1 overflow-y-auto scrollbar-frosted pr-3"
             style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05)',
+              scrollbarWidth: 'auto',
+              scrollbarColor: 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.08)',
             }}
           >
             {isLoading ? (
