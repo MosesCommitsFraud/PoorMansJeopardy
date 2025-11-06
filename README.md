@@ -47,9 +47,11 @@ A web-based multiplayer Jeopardy game with host and player views, real-time game
 - **Framework**: Next.js 16 with React 19
 - **Language**: TypeScript 5.7
 - **Styling**: Tailwind CSS v4
-- **Database**: Vercel KV (with in-memory fallback for local development)
+- **Database**: Upstash Redis (via Vercel integration) - **Required for production**
 - **APIs**: Tenor GIF API (optional)
 - **Graphics**: Three.js for background effects
+
+**Note:** Local development uses in-memory storage. Production deployments **require** Upstash Redis integration to persist lobby data across serverless function instances.
 
 ---
 
@@ -81,15 +83,18 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### Environment Variables
 
-Create a `.env.local` file:
+#### Local Development
+
+For local development, create a `.env.local` file:
 
 ```env
 # Optional: Tenor API key for GIF search
 NEXT_PUBLIC_TENOR_API_KEY=your_tenor_api_key_here
 
-# Optional: Vercel KV (auto-configured on Vercel)
-KV_REST_API_URL=your_kv_url
-KV_REST_API_TOKEN=your_kv_token
+# Optional: Redis connection (for testing with production-like storage)
+# If not provided, uses in-memory storage (lobbies reset on server restart)
+KV_REST_API_URL=your_redis_url
+KV_REST_API_TOKEN=your_redis_token
 ```
 
 **Tenor API Key** (optional): Enables GIF search functionality
@@ -99,6 +104,16 @@ KV_REST_API_TOKEN=your_kv_token
 
 Without the Tenor API key, you can still paste image URLs directly.
 
+#### Production Deployment
+
+**Upstash Redis is REQUIRED for production** - without it, lobbies will disappear due to serverless function limitations.
+
+The app automatically detects these environment variables (injected by Vercel integration):
+- `KV_REST_API_URL` + `KV_REST_API_TOKEN` (legacy Vercel KV)
+- `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` (new Upstash integration)
+
+See [Deployment](#deployment) section for setup instructions.
+
 ---
 
 ## Deployment
@@ -107,10 +122,43 @@ Without the Tenor API key, you can still paste image URLs directly.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/MosesCommitsFraud/PoorMansJeopardy)
 
-1. Click the button above or fork the repository
-2. Import into [Vercel](https://vercel.com)
-3. Add `NEXT_PUBLIC_TENOR_API_KEY` environment variable (optional)
-4. Deploy - Vercel KV will be automatically provisioned
+#### Setup Steps
+
+1. **Initial Deployment**
+   - Click the button above or fork the repository
+   - Import into [Vercel](https://vercel.com)
+   - (Optional) Add `NEXT_PUBLIC_TENOR_API_KEY` environment variable
+   - Complete initial deployment
+
+2. **Add Upstash Redis Integration** ⚠️ **REQUIRED**
+
+   Without Redis, lobbies will disappear in production due to serverless architecture.
+
+   **Option A: Via Vercel Dashboard**
+   - Go to your project in Vercel
+   - Navigate to **Storage** tab
+   - Click **Create Database** → Select **Redis**
+   - Connect it to your project
+   - Environment variables are automatically injected
+
+   **Option B: Via Vercel Marketplace**
+   - Visit [vercel.com/marketplace/upstash](https://vercel.com/marketplace/upstash)
+   - Click **Add Integration**
+   - Select your Jeopardy project
+   - Complete the integration
+
+3. **Redeploy**
+   - After adding Redis, trigger a new deployment
+   - Verify lobbies now persist correctly
+
+#### Why Redis is Required
+
+Vercel uses serverless functions that:
+- Run in isolated, ephemeral instances
+- Don't share memory between requests
+- Terminate after ~15 seconds of inactivity
+
+Without persistent storage (Redis), lobby data stored in one function instance won't be accessible to another, causing "Lobby not found" errors. Local development works fine because it runs as a single, continuous process.
 
 ---
 
