@@ -135,3 +135,14 @@ button:disabled {
 .scrollbar-frosted {
   scrollbar-gutter: stable;
 }
+
+/* Purple text selection highlight */
+::selection {
+  background-color: rgba(168, 85, 247, 0.4);
+  color: inherit;
+}
+
+::-moz-selection {
+  background-color: rgba(168, 85, 247, 0.4);
+  color: inherit;
+}
