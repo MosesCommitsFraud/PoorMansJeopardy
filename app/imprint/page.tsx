@@ -51,6 +51,20 @@ export default function ImprintPage() {
                 <p>Germany</p>
               </section>
 
+              {/* Disclaimer */}
+              <section className="space-y-2">
+                <h2 className="text-xl font-semibold">Disclaimer</h2>
+                <p>
+                  This website is a free, non-commercial implementation of a trivia game inspired by the Jeopardy! format. Jeopardy! is a registered trademark and the intellectual property of its respective owners. This project is not affiliated with, endorsed by, or connected to the official Jeopardy! brand or its rights holders.
+                </p>
+                <p className="mt-2">
+                  This website is provided as a free service for educational and entertainment purposes. The operator does not claim ownership of the Jeopardy! concept or format. This is simply a free solution for those who want to play trivia games in this style.
+                </p>
+                <p className="mt-2">
+                  Please note that this website is hosted on Vercel's free tier, which comes with certain resource limitations. Service availability and performance may be subject to these constraints.
+                </p>
+              </section>
+
               {/* Dispute Resolution */}
               <section className="space-y-2">
                 <h2 className="text-xl font-semibold">EU Dispute Resolution</h2>

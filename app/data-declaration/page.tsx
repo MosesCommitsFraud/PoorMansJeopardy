@@ -95,6 +95,9 @@ export default function DataDeclarationPage() {
                   This data is not combined with other data sources. The collection of this data is based on Art. 6 para. 1 lit. f GDPR. The website operator has a legitimate interest in the technically error-free presentation and optimization of its website.
                 </p>
                 <p className="mt-4">
+                  <strong>Free Tier Hosting:</strong> This website is hosted on Vercel's free tier. This means the service is provided at no cost, but with certain resource and performance limitations. Service availability may be subject to these constraints.
+                </p>
+                <p className="mt-4">
                   Provider details:
                 </p>
                 <p className="font-medium">Vercel Inc.</p>
@@ -167,6 +170,17 @@ export default function DataDeclarationPage() {
                   If you have any questions about data protection, please contact us at:
                 </p>
                 <p className="mt-2">Email: moritz.b.schaefer@outlook.de</p>
+              </section>
+
+              {/* Disclaimer */}
+              <section className="space-y-2">
+                <h2 className="text-xl font-semibold">9. Disclaimer About Content and Service</h2>
+                <p>
+                  This website is a free, non-commercial implementation of a trivia game inspired by the Jeopardy! format. Jeopardy! is a registered trademark and the intellectual property of its respective owners. This project is not affiliated with, endorsed by, or connected to the official Jeopardy! brand.
+                </p>
+                <p className="mt-2">
+                  This is simply a free solution provided for educational and entertainment purposes. The operator does not claim ownership of the Jeopardy! concept or format.
+                </p>
               </section>
             </div>
           </div>
