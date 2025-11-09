@@ -82,7 +82,7 @@ export default function Home() {
 
       {/* Footer Chip */}
       <div className="w-full flex justify-center pb-6">
-        <Badge variant="secondary" className="glass px-4 py-2 flex items-center gap-3">
+        <Badge variant="secondary" className="px-6 py-3 backdrop-blur-md rounded-full flex items-center gap-4 shadow-lg">
           {/* Logo */}
           <img
             src="/logo-white.svg"
@@ -91,17 +91,17 @@ export default function Home() {
           />
 
           {/* Separator */}
-          <div className="h-4 w-px bg-foreground/20" />
+          <div className="h-5 w-px bg-foreground/30" />
 
           {/* Links */}
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-4 text-sm font-medium">
             <Link
               href="/imprint"
               className="hover:text-primary transition-colors"
             >
               Imprint
             </Link>
-            <span className="text-foreground/20">•</span>
+            <span className="text-foreground/30">•</span>
             <Link
               href="/data-declaration"
               className="hover:text-primary transition-colors"

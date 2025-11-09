@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
 
 export default function DataDeclarationPage() {
@@ -11,15 +12,15 @@ export default function DataDeclarationPage() {
       <div className="min-h-screen flex items-center justify-center p-4 py-16">
         <div className="w-full max-w-3xl">
           {/* Back Button */}
-          <Link href="/">
-            <Button variant="outline" className="mb-6 glass">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+          <Link href="/" className="inline-block mb-6">
+            <Badge variant="secondary" className="px-4 py-2 backdrop-blur-md cursor-pointer hover:bg-secondary/80 transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-2 inline" />
               Back to Home
-            </Button>
+            </Badge>
           </Link>
 
           {/* Frosted Glass Content Box */}
-          <div className="glass-strong rounded-2xl p-8 md:p-12 space-y-8">
+          <div className="glass rounded-2xl p-8 md:p-12 space-y-8 shadow-lg">
             <div>
               <h1 className="text-4xl font-bold mb-2">Data Protection Declaration</h1>
               <p className="text-muted-foreground">Privacy Policy</p>
