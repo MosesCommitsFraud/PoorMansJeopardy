@@ -10,25 +10,25 @@ import SettingsButton from "@/components/SettingsButton";
 
 export default function Home() {
   return (
-    <main className="min-h-screen flex items-center justify-center p-4">
+    <main className="min-h-screen flex flex-col items-center justify-center p-4 relative">
       <SettingsButton />
-      <div className="w-full max-w-5xl mx-auto">
+      <div className="w-full max-w-5xl mx-auto flex-grow flex flex-col items-center justify-center">
         <div className="text-center mb-12 space-y-6">
           {/* PMJ Logo */}
           <div className="flex items-center justify-center mb-8">
-            <img 
-              src="/PMJLogo.svg" 
-              alt="Poor Man's Jeopardy" 
+            <img
+              src="/PMJLogo.svg"
+              alt="Poor Man's Jeopardy"
               className="w-full max-w-4xl h-auto"
             />
           </div>
-          
+
           {/* Shiny subtext in frosted glass chip */}
           <div className="flex justify-center">
             <Badge variant="secondary" className="px-6 py-3 text-lg backdrop-blur-md">
-              <ShinyText 
-                text="Create custom trivia games and challenge your friends" 
-                disabled={false} 
+              <ShinyText
+                text="Create custom trivia games and challenge your friends"
+                disabled={false}
                 speed={3}
               />
             </Badge>
@@ -78,6 +78,38 @@ export default function Home() {
             </Card>
           </Link>
         </div>
+      </div>
+
+      {/* Footer Chip */}
+      <div className="w-full flex justify-center pb-6">
+        <Badge variant="secondary" className="glass px-4 py-2 flex items-center gap-3">
+          {/* Logo */}
+          <img
+            src="/logo-white.svg"
+            alt="PMJ Logo"
+            className="h-5 w-auto"
+          />
+
+          {/* Separator */}
+          <div className="h-4 w-px bg-foreground/20" />
+
+          {/* Links */}
+          <div className="flex items-center gap-3 text-xs">
+            <Link
+              href="/imprint"
+              className="hover:text-primary transition-colors"
+            >
+              Imprint
+            </Link>
+            <span className="text-foreground/20">•</span>
+            <Link
+              href="/data-declaration"
+              className="hover:text-primary transition-colors"
+            >
+              Data Declaration
+            </Link>
+          </div>
+        </Badge>
       </div>
     </main>
   );
