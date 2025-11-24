@@ -27,6 +27,13 @@ export interface BuzzerEvent {
   timestamp: number;
 }
 
+// Stores the scoring history for a completed question
+export interface QuestionScoring {
+  buzzerQueue: BuzzerEvent[]; // Original buzzer queue
+  correctPlayerIndex: number | null; // Index of player marked correct (null = all wrong or no scoring)
+  allWrong: boolean; // Whether "all wrong" was applied
+}
+
 export interface GameState {
   categories: Category[];
   players: Player[];
@@ -44,6 +51,8 @@ export interface GameState {
   // Sync timestamps - ensures all clients display content at the same moment
   questionRevealAt?: number; // When to reveal the current question to players
   answerRevealAt?: number; // When to reveal the answer to players
+  // Scoring history per question - allows reviewing/modifying after closing
+  questionScoring?: Record<string, QuestionScoring>;
 }
 
 export interface Lobby {

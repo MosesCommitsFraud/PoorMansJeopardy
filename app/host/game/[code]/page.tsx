@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { GameState, Question, BuzzerEvent } from "@/types/game";
+import { GameState, Question, BuzzerEvent, QuestionScoring } from "@/types/game";
 import { EndGameScreen } from "@/components/EndGameScreen";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useHostPeerSync } from "@/hooks/usePeerSync";
@@ -42,6 +42,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [customScores, setCustomScores] = useState<Record<string, string>>({});
   const [markedCorrectIndex, setMarkedCorrectIndex] = useState<number | null>(null); // Index in buzzer queue of player marked correct
+  const [savedBuzzerQueue, setSavedBuzzerQueue] = useState<BuzzerEvent[]>([]); // Saved queue when reopening a question
   const gameStateRef = useRef<GameState | null>(null);
   const currentVersionRef = useRef(0);
 
@@ -277,6 +278,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     if (question && !question.answered) {
       setSelectedQuestion(question);
       setShowAnswer(false);
+      setMarkedCorrectIndex(null);
+      setSavedBuzzerQueue([]);
       // Don't show to players yet - host needs to click "Show to Players"
     }
   };
@@ -316,12 +319,16 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       setSelectedQuestion(null);
       setShowAnswer(false);
       setMarkedCorrectIndex(null);
+      setSavedBuzzerQueue([]);
     }
   };
 
   const closeQuestion = async (applyAllWrong: boolean = false) => {
     // Close AND mark as answered, applying any pending score changes
     if (selectedQuestion && gameState) {
+      // Get the buzzer queue to save (use saved queue if reopening, else current)
+      const queueToSave = savedBuzzerQueue.length > 0 ? savedBuzzerQueue : (gameState.buzzerQueue || []);
+      
       // Apply buzzer scores if any
       const updatedPlayers = await applyBuzzerScores(applyAllWrong);
       
@@ -332,22 +339,39 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         )
       }));
       
+      // Save scoring history for this question
+      const questionScoring: QuestionScoring = {
+        buzzerQueue: queueToSave,
+        correctPlayerIndex: applyAllWrong ? null : markedCorrectIndex,
+        allWrong: applyAllWrong
+      };
+      
+      const updatedQuestionScoring = {
+        ...(gameState.questionScoring || {}),
+        [selectedQuestion.id]: questionScoring
+      };
+      
       await updateGameState({
         categories: updatedCategories,
         currentQuestion: null,
         buzzerQueue: [],
         showAnswerToPlayers: false,
+        questionScoring: updatedQuestionScoring,
         ...(updatedPlayers ? { players: updatedPlayers } : {})
       });
       
       setSelectedQuestion(null);
       setShowAnswer(false);
       setMarkedCorrectIndex(null);
+      setSavedBuzzerQueue([]);
     }
   };
 
   const reopenQuestion = async (categoryId: string, questionId: string) => {
     if (!gameState) return;
+    
+    // Get saved scoring for this question
+    const savedScoring = gameState.questionScoring?.[questionId];
     
     // Mark question as not answered
     const updatedCategories = gameState.categories.map(cat => ({
@@ -360,6 +384,23 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     await updateGameState({
       categories: updatedCategories
     });
+    
+    // Restore the saved buzzer queue and marking
+    if (savedScoring) {
+      setSavedBuzzerQueue(savedScoring.buzzerQueue);
+      setMarkedCorrectIndex(savedScoring.allWrong ? null : savedScoring.correctPlayerIndex);
+    } else {
+      setSavedBuzzerQueue([]);
+      setMarkedCorrectIndex(null);
+    }
+    
+    // Open the question dialog
+    const category = gameState.categories.find(c => c.id === categoryId);
+    const question = category?.questions.find(q => q.id === questionId);
+    if (question) {
+      setSelectedQuestion({ ...question, answered: false });
+      setShowAnswer(false);
+    }
   };
 
   const clearBuzzerQueue = () => {
@@ -406,7 +447,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     if (!currentState || !selectedQuestion) return;
     
     const points = selectedQuestion.value;
-    const buzzerQueue = currentState.buzzerQueue || [];
+    // Use saved queue if reopening, else current queue
+    const buzzerQueue = savedBuzzerQueue.length > 0 ? savedBuzzerQueue : (currentState.buzzerQueue || []);
     
     if (buzzerQueue.length === 0) return;
     
@@ -909,14 +951,28 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                 </Button>
               </div>
               
-              {(gameState?.buzzerQueue || []).length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">No one has buzzed yet</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {(gameState?.buzzerQueue || []).map((buzz, index) => {
+              {(() => {
+                // Use saved queue if available (reopening), else current queue
+                const displayQueue = savedBuzzerQueue.length > 0 ? savedBuzzerQueue : (gameState?.buzzerQueue || []);
+                const isReopened = savedBuzzerQueue.length > 0;
+                
+                if (displayQueue.length === 0) {
+                  return (
+                    <div className="text-center text-gray-500 py-8">
+                      <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No one has buzzed yet</p>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="space-y-2">
+                    {isReopened && (
+                      <div className="p-2 bg-amber-500/20 border border-amber-400/30 rounded-lg mb-2">
+                        <div className="text-xs font-semibold text-amber-300">REOPENED - Previous responses shown</div>
+                      </div>
+                    )}
+                    {displayQueue.map((buzz, index) => {
                     const isMarkedCorrect = markedCorrectIndex === index;
                     const isMarkedWrong = markedCorrectIndex !== null && index < markedCorrectIndex;
                     const isDisabled = markedCorrectIndex !== null && index > markedCorrectIndex;
@@ -991,17 +1047,18 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     );
                   })}
                   
-                  {/* Score preview */}
-                  {markedCorrectIndex !== null && (
-                    <div className="mt-3 p-3 bg-blue-500/20 border border-blue-400/30 rounded-lg">
-                      <div className="text-xs font-semibold text-blue-300 mb-1">SCORE PREVIEW</div>
-                      <div className="text-sm text-blue-200">
-                        Scores will be applied when you close the question.
+                    {/* Score preview */}
+                    {markedCorrectIndex !== null && (
+                      <div className="mt-3 p-3 bg-blue-500/20 border border-blue-400/30 rounded-lg">
+                        <div className="text-xs font-semibold text-blue-300 mb-1">SCORE PREVIEW</div>
+                        <div className="text-sm text-blue-200">
+                          Scores will be applied when you close the question.
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                );
+              })()}
               
               {/* Manual Score Adjustment Section */}
               <div className="mt-4 pt-4 border-t border-white/10">
