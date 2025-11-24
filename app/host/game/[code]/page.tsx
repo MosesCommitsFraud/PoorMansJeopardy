@@ -264,10 +264,12 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   };
 
   const updateGameState = async (updates: Partial<GameState>) => {
-    if (!gameState) return;
+    const currentState = gameStateRef.current;
+    if (!currentState) return;
     
-    const newState = { ...gameState, ...updates };
+    const newState = { ...currentState, ...updates };
     setGameState(newState); // Update local state immediately
+    gameStateRef.current = newState; // Keep ref in sync
     await persistAndBroadcast(newState);
   };
 
@@ -309,7 +311,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
   const dismissQuestion = async () => {
     // Close without marking as answered
-    if (selectedQuestion && gameState) {
+    if (selectedQuestion && gameStateRef.current) {
       await updateGameState({
         currentQuestion: null,
         buzzerQueue: [],
@@ -325,68 +327,66 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
   const closeQuestion = async (applyAllWrong: boolean = false) => {
     // Close AND mark as answered, applying any pending score changes
-    if (selectedQuestion && gameState) {
-      // Get the buzzer queue to save (use saved queue if reopening, else current)
-      const queueToSave = savedBuzzerQueue.length > 0 ? savedBuzzerQueue : (gameState.buzzerQueue || []);
-      
-      // Apply buzzer scores if any
-      const updatedPlayers = await applyBuzzerScores(applyAllWrong);
-      
-      const updatedCategories = gameState.categories.map(cat => ({
-        ...cat,
-        questions: cat.questions.map(q => 
-          q.id === selectedQuestion.id ? { ...q, answered: true } : q
-        )
-      }));
-      
-      // Save scoring history for this question
-      const questionScoring: QuestionScoring = {
-        buzzerQueue: queueToSave,
-        correctPlayerIndex: applyAllWrong ? null : markedCorrectIndex,
-        allWrong: applyAllWrong
-      };
-      
-      const updatedQuestionScoring = {
-        ...(gameState.questionScoring || {}),
-        [selectedQuestion.id]: questionScoring
-      };
-      
-      await updateGameState({
-        categories: updatedCategories,
-        currentQuestion: null,
-        buzzerQueue: [],
-        showAnswerToPlayers: false,
-        questionScoring: updatedQuestionScoring,
-        ...(updatedPlayers ? { players: updatedPlayers } : {})
-      });
-      
-      setSelectedQuestion(null);
-      setShowAnswer(false);
-      setMarkedCorrectIndex(null);
-      setSavedBuzzerQueue([]);
-    }
+    const currentState = gameStateRef.current;
+    if (!selectedQuestion || !currentState) return;
+    
+    // Get the buzzer queue to save (use saved queue if reopening, else current)
+    const queueToSave = savedBuzzerQueue.length > 0 ? savedBuzzerQueue : (currentState.buzzerQueue || []);
+    
+    // Apply buzzer scores if any
+    const updatedPlayers = await applyBuzzerScores(applyAllWrong);
+    
+    const updatedCategories = currentState.categories.map(cat => ({
+      ...cat,
+      questions: cat.questions.map(q => 
+        q.id === selectedQuestion.id ? { ...q, answered: true } : q
+      )
+    }));
+    
+    // Save scoring history for this question
+    const questionScoring: QuestionScoring = {
+      buzzerQueue: queueToSave,
+      correctPlayerIndex: applyAllWrong ? null : markedCorrectIndex,
+      allWrong: applyAllWrong
+    };
+    
+    const updatedQuestionScoring = {
+      ...(currentState.questionScoring || {}),
+      [selectedQuestion.id]: questionScoring
+    };
+    
+    await updateGameState({
+      categories: updatedCategories,
+      currentQuestion: null,
+      buzzerQueue: [],
+      showAnswerToPlayers: false,
+      questionScoring: updatedQuestionScoring,
+      ...(updatedPlayers ? { players: updatedPlayers } : {})
+    });
+    
+    setSelectedQuestion(null);
+    setShowAnswer(false);
+    setMarkedCorrectIndex(null);
+    setSavedBuzzerQueue([]);
   };
 
   const reopenQuestion = async (categoryId: string, questionId: string) => {
-    if (!gameState) return;
+    const currentState = gameStateRef.current;
+    if (!currentState) return;
     
     // Get saved scoring for this question
-    const savedScoring = gameState.questionScoring?.[questionId];
+    const savedScoring = currentState.questionScoring?.[questionId];
     
     // Mark question as not answered
-    const updatedCategories = gameState.categories.map(cat => ({
+    const updatedCategories = currentState.categories.map(cat => ({
       ...cat,
       questions: cat.questions.map(q => 
         q.id === questionId ? { ...q, answered: false } : q
       )
     }));
     
-    await updateGameState({
-      categories: updatedCategories
-    });
-    
-    // Restore the saved buzzer queue and marking
-    if (savedScoring) {
+    // Restore the saved buzzer queue and marking BEFORE updating state
+    if (savedScoring && savedScoring.buzzerQueue.length > 0) {
       setSavedBuzzerQueue(savedScoring.buzzerQueue);
       setMarkedCorrectIndex(savedScoring.allWrong ? null : savedScoring.correctPlayerIndex);
     } else {
@@ -395,12 +395,18 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     }
     
     // Open the question dialog
-    const category = gameState.categories.find(c => c.id === categoryId);
+    const category = currentState.categories.find(c => c.id === categoryId);
     const question = category?.questions.find(q => q.id === questionId);
     if (question) {
       setSelectedQuestion({ ...question, answered: false });
       setShowAnswer(false);
     }
+    
+    // Update state to mark question as not answered (don't await - dialog should open immediately)
+    const newState = { ...currentState, categories: updatedCategories };
+    setGameState(newState);
+    gameStateRef.current = newState;
+    await persistAndBroadcast(newState);
   };
 
   const clearBuzzerQueue = () => {
