@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, BellOff, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw, Power } from "lucide-react";
+import { Bell, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -300,7 +300,6 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     if (selectedQuestion && gameState) {
       await updateGameState({
         currentQuestion: null,
-        buzzerActive: false,
         buzzerQueue: [],
         showAnswerToPlayers: false
       });
@@ -323,7 +322,6 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       await updateGameState({
         categories: updatedCategories,
         currentQuestion: null,
-        buzzerActive: false,
         buzzerQueue: [],
         showAnswerToPlayers: false
       });
@@ -349,15 +347,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     });
   };
 
-  const activateBuzzer = () => {
-    updateGameState({ buzzerActive: true, buzzerQueue: [] });
-  };
-
-  const deactivateBuzzer = () => {
-    updateGameState({ buzzerActive: false });
-  };
-
-  const clearBuzzer = () => {
+  const clearBuzzerQueue = () => {
     updateGameState({ buzzerQueue: [] });
   };
 
@@ -810,7 +800,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     <Bell className="h-5 w-5 text-yellow-400" />
                     <span className="font-semibold">Buzzer Queue ({(gameState?.buzzerQueue || []).length})</span>
                   </div>
-                  <Button onClick={clearBuzzer} size="sm" variant="outline">
+                  <Button onClick={clearBuzzerQueue} size="sm" variant="outline">
                     Clear
                   </Button>
                 </div>
@@ -847,11 +837,13 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   {gameState?.showAnswerToPlayers ? "Answer Visible to Players" : "Reveal Answer to Players"}
                 </Button>
                 <Button 
-                  onClick={gameState?.buzzerActive ? deactivateBuzzer : activateBuzzer} 
-                  variant={gameState?.buzzerActive ? "secondary" : "default"}
+                  onClick={clearBuzzerQueue} 
+                  variant="outline"
                   className="flex-1"
+                  disabled={(gameState?.buzzerQueue?.length || 0) === 0}
                 >
-                  {gameState?.buzzerActive ? <><BellOff className="mr-2 h-4 w-4" />Disable Buzzer</> : <><Bell className="mr-2 h-4 w-4" />Enable Buzzer</>}
+                  <Bell className="mr-2 h-4 w-4" />
+                  Clear Buzzer Queue {(gameState?.buzzerQueue?.length || 0) > 0 && `(${gameState?.buzzerQueue?.length})`}
                 </Button>
               </div>
               <div className="flex gap-2">

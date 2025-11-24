@@ -238,7 +238,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     }
 
     try {
-      const gameState = { ...lobby.gameState, gameStarted: true };
+      const gameState = { ...lobby.gameState, gameStarted: true, buzzerActive: true };
       const response = await fetch(`/api/lobby/${resolvedParams.code}/state`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
