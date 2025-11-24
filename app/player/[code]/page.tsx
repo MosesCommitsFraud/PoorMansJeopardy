@@ -480,23 +480,30 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 <CardContent className="flex-1 flex items-center justify-center">
                   <div className="grid gap-2 w-full">
                     {/* Category Headers */}
-                    <div className="grid grid-cols-5 gap-2">
+                    <div 
+                      className="grid gap-2"
+                      style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
+                    >
                       {gameState.categories.map((category) => (
-                        <div key={category.id} className="bg-gray-600/50 p-3 text-center rounded backdrop-blur-md border border-white/10">
-                          <h2 className="text-sm font-bold uppercase truncate text-white">{category.name}</h2>
+                        <div key={category.id} className="bg-gray-600/50 p-2 text-center rounded backdrop-blur-md border border-white/10 min-w-0">
+                          <h2 className="text-xs lg:text-sm font-bold uppercase truncate text-white" title={category.name}>{category.name}</h2>
                         </div>
                       ))}
                     </div>
                     
                     {/* Question Grid */}
                     {[0, 1, 2, 3, 4].map((rowIndex) => (
-                      <div key={rowIndex} className="grid grid-cols-5 gap-2">
+                      <div 
+                        key={rowIndex} 
+                        className="grid gap-2"
+                        style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
+                      >
                         {gameState.categories.map((category) => {
                           const question = category.questions[rowIndex];
                           return (
                             <div
                               key={question.id}
-                              className={`aspect-video flex items-center justify-center text-3xl font-bold rounded text-center backdrop-blur-md border ${
+                              className={`aspect-[4/3] flex items-center justify-center text-lg lg:text-2xl xl:text-3xl font-bold rounded text-center backdrop-blur-md border min-w-0 ${
                                 question.answered
                                   ? "bg-white/10 text-gray-500 border-white/10"
                                   : "bg-primary/80 text-primary-foreground border-white/20"
@@ -575,17 +582,17 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
       {/* Full-Screen Current Question Modal - uses synchronized visibility */}
       <Dialog open={questionVisible && !!gameState?.currentQuestion} onOpenChange={() => {}}>
-        <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 flex items-center justify-center p-12 relative">
+        <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 flex flex-col p-6 relative overflow-hidden">
           {/* Timer Chip - Top Right */}
           {gameState?.timerEndAt && (
-            <div className="absolute top-6 right-6">
+            <div className="absolute top-4 right-4 z-10">
               <Badge 
                 variant="outline" 
-                className={`flex items-center gap-2 px-4 py-2 text-2xl font-bold backdrop-blur-md ${
+                className={`flex items-center gap-2 px-3 py-1.5 text-xl font-bold backdrop-blur-md ${
                   currentTime <= 5 ? 'bg-red-500/20 border-red-500 text-red-500 animate-pulse' : 'bg-white/10 border-white/30'
                 }`}
               >
-                <Clock className="h-6 w-6" />
+                <Clock className="h-5 w-5" />
                 <span className="tabular-nums">
                   {Math.floor(currentTime / 60)}:{(currentTime % 60).toString().padStart(2, '0')}
                 </span>
@@ -593,57 +600,73 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
             </div>
           )}
           
-          <div className="text-center space-y-8 w-full">
-            <div className="text-2xl font-bold text-blue-400 mb-6">
-              ${gameState?.currentQuestion?.value}
-            </div>
-            <div className={`font-bold leading-tight px-8 transition-all ${
-              answerVisible 
-                ? 'text-2xl md:text-3xl' 
-                : 'text-5xl md:text-6xl'
-            }`}>
-              {gameState?.currentQuestion?.question}
-            </div>
-            {gameState?.currentQuestion?.questionImageUrl && (
-              <div className={`transition-all ${
-                answerVisible ? 'mt-4' : 'mt-8'
-              }`}>
-                <img 
-                  src={gameState.currentQuestion.questionImageUrl} 
-                  alt="Question" 
-                  className={`rounded-lg mx-auto ${
-                    answerVisible 
-                      ? 'max-w-full max-h-48' 
-                      : 'max-w-full max-h-96'
-                  }`}
-                />
+          <div className="flex-1 flex flex-col items-center justify-center overflow-hidden min-h-0">
+            <div className="w-full max-h-full overflow-y-auto flex flex-col items-center px-4">
+              <div className="text-xl font-bold text-blue-400 mb-4 flex-shrink-0">
+                ${gameState?.currentQuestion?.value}
               </div>
-            )}
-            
-            {/* Show Answer - uses synchronized answerVisible state */}
-            {answerVisible && gameState?.showAnswerToPlayers && (
-              <div className="mt-8 pt-6 border-t-4 border-green-400/50">
-                <div className="text-2xl font-bold text-green-400 mb-4">ANSWER:</div>
-                <div className="text-5xl md:text-6xl font-bold text-green-300">
-                  {gameState?.currentQuestion?.answer}
+              
+              {/* Question section - scales based on whether answer is visible */}
+              <div className={`text-center w-full flex-shrink-0 ${answerVisible ? 'mb-4' : 'mb-6'}`}>
+                <div 
+                  className={`font-bold leading-tight transition-all break-words ${
+                    answerVisible 
+                      ? 'text-lg md:text-xl lg:text-2xl' 
+                      : (gameState?.currentQuestion?.question?.length || 0) > 200
+                        ? 'text-xl md:text-2xl lg:text-3xl'
+                        : (gameState?.currentQuestion?.question?.length || 0) > 100
+                          ? 'text-2xl md:text-3xl lg:text-4xl'
+                          : 'text-3xl md:text-4xl lg:text-5xl'
+                  }`}
+                >
+                  {gameState?.currentQuestion?.question}
                 </div>
-                {gameState?.currentQuestion?.answerImageUrl && (
-                  <div className="mt-8">
+                {gameState?.currentQuestion?.questionImageUrl && (
+                  <div className={`mt-4 flex justify-center ${answerVisible ? 'max-h-32' : 'max-h-56'}`}>
                     <img 
-                      src={gameState.currentQuestion.answerImageUrl} 
-                      alt="Answer" 
-                      className="max-w-full max-h-96 rounded-lg mx-auto"
+                      src={gameState.currentQuestion.questionImageUrl} 
+                      alt="Question" 
+                      className={`rounded-lg object-contain ${
+                        answerVisible 
+                          ? 'max-h-32 max-w-[50%]' 
+                          : 'max-h-56 max-w-full'
+                      }`}
                     />
                   </div>
                 )}
               </div>
-            )}
-            
-            {!answerVisible && (
-              <div className="mt-12 text-xl text-gray-400">
-                Read the question carefully and be ready to answer!
-              </div>
-            )}
+              
+              {/* Show Answer - uses synchronized answerVisible state */}
+              {answerVisible && gameState?.showAnswerToPlayers && (
+                <div className="w-full pt-4 border-t-4 border-green-400/50 flex-shrink-0 text-center">
+                  <div className="text-lg font-bold text-green-400 mb-2">ANSWER:</div>
+                  <div 
+                    className={`font-bold text-green-300 break-words ${
+                      (gameState?.currentQuestion?.answer?.length || 0) > 100
+                        ? 'text-xl md:text-2xl lg:text-3xl'
+                        : 'text-2xl md:text-3xl lg:text-4xl'
+                    }`}
+                  >
+                    {gameState?.currentQuestion?.answer}
+                  </div>
+                  {gameState?.currentQuestion?.answerImageUrl && (
+                    <div className="mt-4 flex justify-center max-h-40">
+                      <img 
+                        src={gameState.currentQuestion.answerImageUrl} 
+                        alt="Answer" 
+                        className="max-h-40 max-w-full object-contain rounded-lg"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {!answerVisible && (
+                <div className="mt-6 text-base text-gray-400 flex-shrink-0">
+                  Read the question carefully and be ready to answer!
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

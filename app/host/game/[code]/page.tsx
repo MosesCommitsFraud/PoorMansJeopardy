@@ -584,24 +584,31 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
           </CardHeader>
           <CardContent>
           <div className="grid gap-2">
-            <div className="grid grid-cols-5 gap-2">
+            <div 
+              className="grid gap-2"
+              style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
+            >
               {gameState.categories.map((category) => (
-                <div key={category.id} className="bg-gray-700/50 p-4 text-center rounded-lg backdrop-blur-md border border-white/10">
-                  <h2 className="text-xl font-bold uppercase text-white">{category.name}</h2>
+                <div key={category.id} className="bg-gray-700/50 p-3 text-center rounded-lg backdrop-blur-md border border-white/10 min-w-0">
+                  <h2 className="text-base font-bold uppercase text-white truncate" title={category.name}>{category.name}</h2>
                 </div>
               ))}
             </div>
             
             {[0, 1, 2, 3, 4].map((rowIndex) => (
-              <div key={rowIndex} className="grid grid-cols-5 gap-2">
+              <div 
+                key={rowIndex} 
+                className="grid gap-2"
+                style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
+              >
                 {gameState.categories.map((category) => {
                   const question = category.questions[rowIndex];
                   return (
-                    <div key={question.id} className="relative">
+                    <div key={question.id} className="relative min-w-0">
                       <button
                         onClick={() => selectQuestion(category.id, question.id)}
                         disabled={question.answered}
-                        className={`w-full p-8 text-3xl font-bold rounded-lg transition-all backdrop-blur-md border ${
+                        className={`w-full aspect-[4/3] flex items-center justify-center text-xl lg:text-2xl xl:text-3xl font-bold rounded-lg transition-all backdrop-blur-md border ${
                           question.answered
                             ? "bg-white/10 text-gray-500 cursor-not-allowed border-white/10"
                             : "bg-primary/80 text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-md border-white/20"
@@ -633,8 +640,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
       {/* Question Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && dismissQuestion()}>
-        <DialogContent className="max-w-3xl border border-white/20 bg-black/30 backdrop-blur-xl">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center justify-between">
               <span>Question Worth: ${selectedQuestion?.value}</span>
               <Badge variant={gameState?.currentQuestion?.id === selectedQuestion?.id ? "default" : "outline"}>
@@ -642,31 +649,41 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               </Badge>
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-6">
-            <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-6 rounded-lg">
+          <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
+            <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-4 rounded-lg">
               <div className="text-sm font-semibold text-gray-300 mb-2">QUESTION:</div>
-              <div className="text-2xl font-bold">{selectedQuestion?.question}</div>
+              <div className={`font-bold break-words ${
+                (selectedQuestion?.question?.length || 0) > 200 
+                  ? 'text-base' 
+                  : (selectedQuestion?.question?.length || 0) > 100 
+                    ? 'text-lg' 
+                    : 'text-xl'
+              }`}>{selectedQuestion?.question}</div>
               {selectedQuestion?.questionImageUrl && (
-                <div className="mt-4">
+                <div className="mt-3 flex justify-center">
                   <img 
                     src={selectedQuestion.questionImageUrl} 
                     alt="Question" 
-                    className="max-w-full max-h-64 rounded-lg mx-auto"
+                    className="max-w-full max-h-48 rounded-lg object-contain"
                   />
                 </div>
               )}
             </div>
             
             {showAnswer && (
-              <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-6 rounded-lg">
+              <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-4 rounded-lg">
                 <div className="text-sm font-semibold text-gray-300 mb-2">ANSWER:</div>
-                <div className="text-2xl font-bold">{selectedQuestion?.answer}</div>
+                <div className={`font-bold break-words ${
+                  (selectedQuestion?.answer?.length || 0) > 100 
+                    ? 'text-base' 
+                    : 'text-xl'
+                }`}>{selectedQuestion?.answer}</div>
                 {selectedQuestion?.answerImageUrl && (
-                  <div className="mt-4">
+                  <div className="mt-3 flex justify-center">
                     <img 
                       src={selectedQuestion.answerImageUrl} 
                       alt="Answer" 
-                      className="max-w-full max-h-64 rounded-lg mx-auto"
+                      className="max-w-full max-h-48 rounded-lg object-contain"
                     />
                   </div>
                 )}
