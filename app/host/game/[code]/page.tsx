@@ -315,7 +315,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       await updateGameState({
         currentQuestion: null,
         buzzerQueue: [],
-        showAnswerToPlayers: false
+        showAnswerToPlayers: false,
+        timerEndAt: null
       });
       
       setSelectedQuestion(null);
@@ -360,6 +361,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       currentQuestion: null,
       buzzerQueue: [],
       showAnswerToPlayers: false,
+      timerEndAt: null,
       questionScoring: updatedQuestionScoring,
       ...(updatedPlayers ? { players: updatedPlayers } : {})
     });
