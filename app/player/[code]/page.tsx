@@ -604,6 +604,24 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
       {/* Full-Screen Current Question Modal - uses synchronized visibility */}
       <Dialog open={questionVisible && !!gameState?.currentQuestion} onOpenChange={() => {}}>
         <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 flex flex-col p-6 relative overflow-hidden">
+          {/* Buzzer Button - Bottom Left */}
+          <div className="absolute bottom-6 left-6 z-10">
+            <button
+              onClick={buzz}
+              disabled={!gameState?.buzzerActive || hasBuzzed}
+              className={`flex items-center gap-3 px-6 py-4 rounded-2xl text-xl font-bold transition-all backdrop-blur-md border-2 shadow-lg ${
+                hasBuzzed
+                  ? "bg-yellow-500/30 border-yellow-400 text-yellow-300"
+                  : gameState?.buzzerActive
+                    ? "bg-red-600/70 border-red-400 text-white hover:bg-red-500/80 hover:scale-105 cursor-pointer animate-pulse"
+                    : "bg-gray-600/30 border-gray-500/30 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              <Bell className={`h-7 w-7 ${hasBuzzed ? "" : "animate-bounce"}`} />
+              <span>{hasBuzzed ? "✓ BUZZED!" : "BUZZ IN"}</span>
+            </button>
+          </div>
+          
           {/* Timer Chip - Top Right */}
           {gameState?.timerEndAt && (
             <div className="absolute top-4 right-4 z-10">

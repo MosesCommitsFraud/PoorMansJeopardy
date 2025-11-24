@@ -147,13 +147,21 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       
       // Only update if incoming version is newer (or force load)
       if (force || incomingVersion > currentVersionRef.current) {
-        setGameState(data.gameState);
+        // Ensure buzzerActive is true when game is running
+        const loadedState = data.gameState;
+        if (loadedState.gameStarted && !loadedState.buzzerActive) {
+          loadedState.buzzerActive = true;
+          // Persist the fix
+          persistAndBroadcast(loadedState);
+        }
+        
+        setGameState(loadedState);
         setCurrentVersion(incomingVersion);
         currentVersionRef.current = incomingVersion;
         setLobbyName(data.lobbyName || "");
         
-        if (data.gameState.currentQuestion) {
-          setSelectedQuestion(data.gameState.currentQuestion);
+        if (loadedState.currentQuestion) {
+          setSelectedQuestion(loadedState.currentQuestion);
         }
       }
     }
