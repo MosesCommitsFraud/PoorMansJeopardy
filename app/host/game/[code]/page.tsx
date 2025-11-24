@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +18,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { GameState, Question } from "@/types/game";
+import { GameState, Question, BuzzerEvent } from "@/types/game";
 import { EndGameScreen } from "@/components/EndGameScreen";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useHostPeerSync } from "@/hooks/usePeerSync";
+import { Wifi, WifiOff } from "lucide-react";
 
 export default function HostGame({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -38,12 +40,80 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [lobbyName, setLobbyName] = useState("");
   const [timerDuration, setTimerDuration] = useState(30);
   const [currentTime, setCurrentTime] = useState<number>(0);
+  const gameStateRef = useRef<GameState | null>(null);
+
+  // Keep gameStateRef in sync
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  // Handle buzz received via P2P
+  const handlePeerBuzz = useCallback((playerId: string, playerName: string) => {
+    const currentState = gameStateRef.current;
+    if (!currentState?.buzzerActive) return;
+    
+    // Check if player already buzzed
+    const alreadyBuzzed = currentState.buzzerQueue?.some(b => b.playerId === playerId);
+    if (alreadyBuzzed) return;
+    
+    // Add to queue
+    const newBuzz: BuzzerEvent = {
+      playerId,
+      playerName,
+      timestamp: Date.now()
+    };
+    
+    const newQueue = [...(currentState.buzzerQueue || []), newBuzz];
+    const newState = { ...currentState, buzzerQueue: newQueue };
+    
+    // Update local state immediately
+    setGameState(newState);
+    
+    // Play buzzer sound
+    playBuzzerSound();
+    
+    // Persist to server and broadcast
+    persistAndBroadcast(newState);
+  }, []);
+
+  // Callback when a new player connects via P2P - send them current state
+  const handlePlayerConnected = useCallback(() => {
+    // Refresh state and broadcast to all players
+    loadGameState();
+  }, []);
+
+  // PeerJS host - broadcasts state to all connected players
+  const { 
+    status: peerStatus, 
+    connectedPlayers, 
+    broadcastState,
+    isConnected: isPeerConnected 
+  } = useHostPeerSync({
+    lobbyCode: resolvedParams.code,
+    enabled: true,
+    onBuzz: handlePeerBuzz,
+    onPlayerConnected: handlePlayerConnected,
+  });
+
+  // Polling is now just a backup - P2P handles real-time sync
+  const getPollingInterval = () => {
+    // If P2P is connected, poll very slowly (just for consistency checks)
+    if (isPeerConnected) {
+      return 10000; // 10 seconds when P2P is working
+    }
+    // Fallback to faster polling if P2P fails
+    if (gameState?.currentQuestion || gameState?.buzzerActive) {
+      return 500; // Fast polling during active question/buzzer
+    }
+    return 3000; // Slower polling when idle
+  };
 
   useEffect(() => {
     loadGameState();
     
-    // Smart polling: only check lightweight version endpoint
-    const interval = setInterval(async () => {
+    let timeoutId: NodeJS.Timeout;
+    
+    const pollVersion = async () => {
       try {
         const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
         const data = await response.json();
@@ -55,10 +125,16 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       } catch (error) {
         console.error("Error checking version:", error);
       }
-    }, 1500); // Check version every 1.5s (tiny payload, instant updates)
+      
+      // Schedule next poll with adaptive interval
+      timeoutId = setTimeout(pollVersion, getPollingInterval());
+    };
     
-    return () => clearInterval(interval);
-  }, [currentVersion]);
+    // Start polling
+    timeoutId = setTimeout(pollVersion, getPollingInterval());
+    
+    return () => clearTimeout(timeoutId);
+  }, [currentVersion, gameState?.currentQuestion, gameState?.buzzerActive]);
 
   const loadGameState = async () => {
     const response = await fetch(`/api/lobby/${resolvedParams.code}`);
@@ -147,16 +223,27 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     await updateGameState({ timerDuration: duration });
   };
 
-  const updateGameState = async (updates: Partial<GameState>) => {
-    if (!gameState) return;
-    
-    const newState = { ...gameState, ...updates };
-    await fetch(`/api/lobby/${resolvedParams.code}/state`, {
+  // Persist to server and broadcast via P2P
+  const persistAndBroadcast = async (newState: GameState) => {
+    const response = await fetch(`/api/lobby/${resolvedParams.code}/state`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ gameState: newState }),
     });
-    setGameState(newState);
+    const data = await response.json();
+    const newVersion = data.version || currentVersion + 1;
+    setCurrentVersion(newVersion);
+    
+    // Broadcast instantly to all connected players via P2P
+    broadcastState(newState, newVersion);
+  };
+
+  const updateGameState = async (updates: Partial<GameState>) => {
+    if (!gameState) return;
+    
+    const newState = { ...gameState, ...updates };
+    setGameState(newState); // Update local state immediately
+    await persistAndBroadcast(newState);
   };
 
   const selectQuestion = async (categoryId: string, questionId: string) => {
@@ -172,16 +259,24 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
   const showToPlayers = async () => {
     if (selectedQuestion) {
+      // Set reveal timestamp 600ms in the future
+      // This gives all clients time to receive the update and display simultaneously
+      const revealAt = Date.now() + 600;
       await updateGameState({ 
         currentQuestion: selectedQuestion,
-        buzzerQueue: []
+        buzzerQueue: [],
+        questionRevealAt: revealAt,
+        answerRevealAt: undefined // Clear any previous answer reveal
       });
     }
   };
 
   const toggleAnswerToPlayers = async () => {
+    const willShowAnswer = !gameState?.showAnswerToPlayers;
     await updateGameState({ 
-      showAnswerToPlayers: !gameState?.showAnswerToPlayers
+      showAnswerToPlayers: willShowAnswer,
+      // Set reveal timestamp when showing answer so all clients display at same time
+      answerRevealAt: willShowAnswer ? Date.now() + 600 : undefined
     });
   };
 
@@ -408,6 +503,16 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               </Badge>
               <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
                 {resolvedParams.code}
+              </Badge>
+              {/* P2P Connection Status */}
+              <Badge 
+                variant={isPeerConnected ? "default" : "secondary"} 
+                className={`px-3 py-1 text-sm backdrop-blur-md flex items-center gap-1.5 ${
+                  isPeerConnected ? "bg-green-600" : "bg-yellow-600"
+                }`}
+              >
+                {isPeerConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                {isPeerConnected ? `${connectedPlayers} P2P` : "Connecting..."}
               </Badge>
             </div>
             <div className="flex gap-2">

@@ -41,6 +41,9 @@ export interface GameState {
   endedAt?: number; // Timestamp when the game ended
   winnerId?: string | null; // ID of the winner
   playerWins?: Record<string, number>; // Track wins per player ID in this lobby
+  // Sync timestamps - ensures all clients display content at the same moment
+  questionRevealAt?: number; // When to reveal the current question to players
+  answerRevealAt?: number; // When to reveal the answer to players
 }
 
 export interface Lobby {

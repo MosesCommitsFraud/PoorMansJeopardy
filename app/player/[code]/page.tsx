@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,8 @@ import {
 import { GameState } from "@/types/game";
 import { EndGameScreen } from "@/components/EndGameScreen";
 import { useSettings } from "@/contexts/SettingsContext";
+import { usePlayerPeerSync } from "@/hooks/usePeerSync";
+import { Wifi, WifiOff } from "lucide-react";
 
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -37,6 +39,15 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const justBuzzedLocallyRef = useRef(false);
   const [lobbyName, setLobbyName] = useState("");
   const [currentTime, setCurrentTime] = useState<number>(0);
+  // Synchronized display states - wait for reveal timestamps
+  const [questionVisible, setQuestionVisible] = useState(false);
+  const [answerVisible, setAnswerVisible] = useState(false);
+  const gameStateRef = useRef<GameState | null>(null);
+
+  // Keep ref in sync
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
 
   useEffect(() => {
     const savedPlayerId = localStorage.getItem("jeopardy_player_id");
@@ -48,12 +59,53 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     }
   }, []);
 
+  // Handle state updates from P2P
+  const handlePeerStateUpdate = useCallback((newGameState: GameState, version: number) => {
+    const currentState = gameStateRef.current;
+    
+    // Check if host returned to lobby
+    if (currentState?.gameStarted && !newGameState.gameStarted && !newGameState.gameEnded) {
+      router.push(`/lobby/${resolvedParams.code}`);
+      return;
+    }
+    
+    setGameState(newGameState);
+    setCurrentVersion(version);
+    checkBuzzerStatus(newGameState);
+  }, [router, resolvedParams.code]);
+
+  // PeerJS player - connects to host for real-time updates
+  const { 
+    status: peerStatus, 
+    buzz: peerBuzz,
+    isConnected: isPeerConnected 
+  } = usePlayerPeerSync({
+    lobbyCode: resolvedParams.code,
+    playerId: playerId,
+    enabled: !!playerId,
+    onStateUpdate: handlePeerStateUpdate,
+  });
+
+  // Polling is now just a backup - P2P handles real-time sync
+  const getPollingInterval = () => {
+    // If P2P is connected, poll very slowly (just for consistency checks)
+    if (isPeerConnected) {
+      return 10000; // 10 seconds when P2P is working
+    }
+    // Fallback to faster polling if P2P fails
+    if (gameState?.currentQuestion || gameState?.buzzerActive) {
+      return 500; // Fast polling during active question/buzzer
+    }
+    return 3000; // Slower polling when idle
+  };
+
   useEffect(() => {
     if (playerId) {
       loadGameState();
       
-      // Smart polling: only check lightweight version endpoint
-      const interval = setInterval(async () => {
+      let timeoutId: NodeJS.Timeout;
+      
+      const pollVersion = async () => {
         try {
           const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
           const data = await response.json();
@@ -65,11 +117,17 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         } catch (error) {
           console.error("Error checking version:", error);
         }
-      }, 1500); // Check version every 1.5s (tiny payload)
+        
+        // Schedule next poll with adaptive interval
+        timeoutId = setTimeout(pollVersion, getPollingInterval());
+      };
       
-      return () => clearInterval(interval);
+      // Start polling
+      timeoutId = setTimeout(pollVersion, getPollingInterval());
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [playerId, currentVersion]);
+  }, [playerId, currentVersion, gameState?.currentQuestion, gameState?.buzzerActive]);
 
   const loadGameState = async () => {
     const response = await fetch(`/api/lobby/${resolvedParams.code}`);
@@ -155,12 +213,71 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     return () => clearInterval(interval);
   }, [gameState?.timerEndAt]);
 
+  // Synchronized reveal effect - waits for reveal timestamps so all clients display at the same moment
+  useEffect(() => {
+    // Reset visibility when question changes
+    if (!gameState?.currentQuestion) {
+      setQuestionVisible(false);
+      setAnswerVisible(false);
+      return;
+    }
+
+    const now = Date.now();
+    const questionRevealAt = gameState.questionRevealAt || 0;
+    const answerRevealAt = gameState.answerRevealAt || 0;
+
+    // Handle question reveal
+    if (questionRevealAt > 0) {
+      const delay = Math.max(0, questionRevealAt - now);
+      if (delay > 0) {
+        const timeout = setTimeout(() => setQuestionVisible(true), delay);
+        return () => clearTimeout(timeout);
+      } else {
+        setQuestionVisible(true);
+      }
+    } else if (gameState.currentQuestion) {
+      // Fallback: show immediately if no reveal timestamp (backwards compatibility)
+      setQuestionVisible(true);
+    }
+  }, [gameState?.currentQuestion?.id, gameState?.questionRevealAt]);
+
+  // Separate effect for answer reveal
+  useEffect(() => {
+    if (!gameState?.showAnswerToPlayers) {
+      setAnswerVisible(false);
+      return;
+    }
+
+    const now = Date.now();
+    const answerRevealAt = gameState.answerRevealAt || 0;
+
+    if (answerRevealAt > 0) {
+      const delay = Math.max(0, answerRevealAt - now);
+      if (delay > 0) {
+        const timeout = setTimeout(() => setAnswerVisible(true), delay);
+        return () => clearTimeout(timeout);
+      } else {
+        setAnswerVisible(true);
+      }
+    } else {
+      // Fallback: show immediately if no reveal timestamp
+      setAnswerVisible(true);
+    }
+  }, [gameState?.showAnswerToPlayers, gameState?.answerRevealAt]);
+
   const buzz = async () => {
     if (gameState?.buzzerActive && !hasBuzzed) {
       // Play buzzer sound immediately for instant feedback
       playBuzzerSound();
       justBuzzedLocallyRef.current = true; // Flag to prevent double-play
+      setHasBuzzed(true); // Optimistic update
       
+      // Send buzz via P2P if connected (instant)
+      if (isPeerConnected) {
+        peerBuzz(playerId, playerName);
+      }
+      
+      // Also send via HTTP as backup (ensures persistence)
       try {
         const response = await fetch(`/api/lobby/${resolvedParams.code}/buzz`, {
           method: "POST",
@@ -168,18 +285,14 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
           body: JSON.stringify({ playerId, playerName }),
         });
         
-        if (response.ok) {
-          setHasBuzzed(true);
-          // Force immediate update
-          loadGameState();
-        } else {
+        if (!response.ok) {
           const data = await response.json();
-          console.error("Buzz error:", data.error);
-          justBuzzedLocallyRef.current = false; // Reset on error
+          console.error("Buzz HTTP error:", data.error);
+          // Don't reset hasBuzzed - P2P might have worked
         }
       } catch (error) {
-        console.error("Buzz failed:", error);
-        justBuzzedLocallyRef.current = false; // Reset on error
+        console.error("Buzz HTTP failed:", error);
+        // Don't reset - P2P might have worked
       }
     }
   };
@@ -270,6 +383,16 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
             </Badge>
             <Badge variant="outline" className="px-2 py-1 text-xs font-mono backdrop-blur-md">
               {resolvedParams.code}
+            </Badge>
+            {/* P2P Connection Status */}
+            <Badge 
+              variant={isPeerConnected ? "default" : "secondary"} 
+              className={`px-2 py-1 text-xs backdrop-blur-md flex items-center gap-1 ${
+                isPeerConnected ? "bg-green-600" : "bg-yellow-600"
+              }`}
+            >
+              {isPeerConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+              {isPeerConnected ? "Live" : "..."}
             </Badge>
           </div>
           <Button onClick={leaveGame} variant="destructive" size="sm">
@@ -450,8 +573,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         </div>
       </div>
 
-      {/* Full-Screen Current Question Modal */}
-      <Dialog open={!!gameState?.currentQuestion} onOpenChange={() => {}}>
+      {/* Full-Screen Current Question Modal - uses synchronized visibility */}
+      <Dialog open={questionVisible && !!gameState?.currentQuestion} onOpenChange={() => {}}>
         <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 flex items-center justify-center p-12 relative">
           {/* Timer Chip - Top Right */}
           {gameState?.timerEndAt && (
@@ -475,7 +598,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
               ${gameState?.currentQuestion?.value}
             </div>
             <div className={`font-bold leading-tight px-8 transition-all ${
-              gameState?.showAnswerToPlayers 
+              answerVisible 
                 ? 'text-2xl md:text-3xl' 
                 : 'text-5xl md:text-6xl'
             }`}>
@@ -483,13 +606,13 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
             </div>
             {gameState?.currentQuestion?.questionImageUrl && (
               <div className={`transition-all ${
-                gameState?.showAnswerToPlayers ? 'mt-4' : 'mt-8'
+                answerVisible ? 'mt-4' : 'mt-8'
               }`}>
                 <img 
                   src={gameState.currentQuestion.questionImageUrl} 
                   alt="Question" 
                   className={`rounded-lg mx-auto ${
-                    gameState?.showAnswerToPlayers 
+                    answerVisible 
                       ? 'max-w-full max-h-48' 
                       : 'max-w-full max-h-96'
                   }`}
@@ -497,8 +620,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
               </div>
             )}
             
-            {/* Show Answer if host enabled it */}
-            {gameState?.showAnswerToPlayers && (
+            {/* Show Answer - uses synchronized answerVisible state */}
+            {answerVisible && gameState?.showAnswerToPlayers && (
               <div className="mt-8 pt-6 border-t-4 border-green-400/50">
                 <div className="text-2xl font-bold text-green-400 mb-4">ANSWER:</div>
                 <div className="text-5xl md:text-6xl font-bold text-green-300">
@@ -516,7 +639,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
               </div>
             )}
             
-            {!gameState?.showAnswerToPlayers && (
+            {!answerVisible && (
               <div className="mt-12 text-xl text-gray-400">
                 Read the question carefully and be ready to answer!
               </div>

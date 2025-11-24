@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle, AlertCircle, Edit2 } from "lucide-react";
+import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle, AlertCircle, Edit2, Wifi, WifiOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@heroui/spinner";
 import { 
@@ -18,6 +18,8 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
+import { Lobby } from "@/types/game";
+import { useHostPeerSync, usePlayerPeerSync } from "@/hooks/usePeerSync";
 
 export default function LobbyRoom({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -34,30 +36,97 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const [confirmAction, setConfirmAction] = useState<(() => void) | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [lobbyName, setLobbyName] = useState("");
+  const [playerId, setPlayerId] = useState<string>("");
+  const lobbyRef = useRef<any>(null);
+
+  // Keep ref in sync
+  useEffect(() => {
+    lobbyRef.current = lobby;
+  }, [lobby]);
+
+  // Get player ID on mount
+  useEffect(() => {
+    const savedPlayerId = localStorage.getItem("jeopardy_player_id");
+    if (savedPlayerId) {
+      setPlayerId(savedPlayerId);
+    }
+  }, []);
+
+  // Handle lobby updates from P2P (for players)
+  const handlePeerLobbyUpdate = useCallback((newLobby: Lobby, version: number) => {
+    // Check if game started - redirect to game page
+    if (newLobby.gameState.gameStarted) {
+      const hostId = localStorage.getItem("jeopardy_host_id");
+      if (newLobby.hostId === hostId) {
+        router.push(`/host/game/${resolvedParams.code}`);
+      } else {
+        router.push(`/player/${resolvedParams.code}`);
+      }
+      return;
+    }
+    
+    setLobby(newLobby);
+    setCurrentVersion(version);
+    setLobbyName(newLobby.lobbyName || "");
+  }, [router, resolvedParams.code]);
+
+  // Callback when a new player connects via P2P - refresh and broadcast
+  const handlePlayerConnected = useCallback(() => {
+    // When a new player connects, refresh lobby state and broadcast
+    const hostId = localStorage.getItem("jeopardy_host_id");
+    loadLobby(hostId);
+  }, []);
+
+  // PeerJS for host - broadcasts lobby state
+  const { 
+    status: hostPeerStatus, 
+    connectedPlayers,
+    broadcastLobby,
+    isConnected: isHostPeerConnected 
+  } = useHostPeerSync({
+    lobbyCode: resolvedParams.code,
+    enabled: isHost,
+    onPlayerConnected: handlePlayerConnected,
+  });
+
+  // PeerJS for player - receives lobby updates
+  const { 
+    status: playerPeerStatus,
+    isConnected: isPlayerPeerConnected 
+  } = usePlayerPeerSync({
+    lobbyCode: resolvedParams.code,
+    playerId: playerId,
+    enabled: !isHost && !!playerId,
+    onLobbyUpdate: handlePeerLobbyUpdate,
+  });
+
+  const isPeerConnected = isHost ? isHostPeerConnected : isPlayerPeerConnected;
 
   useEffect(() => {
     const hostId = localStorage.getItem("jeopardy_host_id");
     loadLobby(hostId);
     
-    // Smart polling: only check version endpoint (tiny payload)
+    // Polling is now backup - P2P handles real-time sync
     const interval = setInterval(async () => {
-      if (lobby?.gameState?.gameStarted) return; // Stop when game starts
+      if (lobby?.gameState?.gameStarted) return;
+      
+      // If P2P is connected, poll very slowly
+      const pollInterval = isPeerConnected ? 10000 : 2000;
       
       try {
         const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
         const data = await response.json();
         
-        // Only fetch full lobby if version changed
         if (data.version !== currentVersion) {
           loadLobby(hostId);
         }
       } catch (error) {
         console.error("Error checking version:", error);
       }
-    }, 2000); // Check version every 2 seconds (super lightweight)
+    }, isPeerConnected ? 10000 : 2000);
     
     return () => clearInterval(interval);
-  }, [currentVersion, lobby?.gameState?.gameStarted]);
+  }, [currentVersion, lobby?.gameState?.gameStarted, isPeerConnected]);
 
   const loadLobby = async (hostId: string | null) => {
     try {
@@ -87,6 +156,11 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
         setIsHost(data.hostId === hostId);
         setLobbyName(data.lobbyName || "");
         setError("");
+        
+        // If host, broadcast lobby state to all connected players
+        if (data.hostId === hostId && isHostPeerConnected) {
+          broadcastLobby(data, data.version || 0);
+        }
         
         // If game has started, redirect to game page
         if (data.gameState.gameStarted) {
@@ -131,11 +205,18 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
     try {
       const gameState = { ...lobby.gameState, gameStarted: true };
-      await fetch(`/api/lobby/${resolvedParams.code}/state`, {
+      const response = await fetch(`/api/lobby/${resolvedParams.code}/state`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gameState }),
       });
+      
+      const data = await response.json();
+      const newVersion = data.version || currentVersion + 1;
+      
+      // Broadcast game start to all connected players via P2P
+      const updatedLobby = { ...lobby, gameState, version: newVersion };
+      broadcastLobby(updatedLobby, newVersion);
 
       router.push(`/host/game/${resolvedParams.code}`);
     } catch (error) {
@@ -292,6 +373,16 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
                   </Badge>
                   <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
                     {resolvedParams.code}
+                  </Badge>
+                  {/* P2P Connection Status */}
+                  <Badge 
+                    variant={isPeerConnected ? "default" : "secondary"} 
+                    className={`px-3 py-1 text-sm backdrop-blur-md flex items-center gap-1.5 ${
+                      isPeerConnected ? "bg-green-600" : "bg-yellow-600"
+                    }`}
+                  >
+                    {isPeerConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                    {isPeerConnected ? (isHost ? `${connectedPlayers} P2P` : "Live") : "Connecting..."}
                   </Badge>
                 </>
               ) : (
