@@ -40,6 +40,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [lobbyName, setLobbyName] = useState("");
   const [timerDuration, setTimerDuration] = useState(30);
   const [currentTime, setCurrentTime] = useState<number>(0);
+  const [customScores, setCustomScores] = useState<Record<string, string>>({});
   const gameStateRef = useRef<GameState | null>(null);
 
   // Keep gameStateRef in sync
@@ -347,13 +348,26 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   };
 
   const updatePlayerScore = async (playerId: string, points: number) => {
-    if (!gameState) return;
+    const currentState = gameStateRef.current;
+    if (!currentState) return;
     
-    const updatedPlayers = gameState.players.map(p =>
+    const updatedPlayers = currentState.players.map(p =>
       p.id === playerId ? { ...p, score: p.score + points } : p
     );
     
-    await updateGameState({ players: updatedPlayers });
+    // Optimistic update - immediately update local state
+    const newState = { ...currentState, players: updatedPlayers };
+    setGameState(newState);
+    gameStateRef.current = newState;
+    
+    // Persist to server
+    await persistAndBroadcast(newState);
+  };
+
+  const applyCustomScore = async (playerId: string, add: boolean) => {
+    const value = parseInt(customScores[playerId] || "0", 10);
+    if (isNaN(value) || value === 0) return;
+    await updatePlayerScore(playerId, add ? value : -value);
   };
 
   const endGame = () => {
@@ -564,6 +578,39 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                         <Button size="sm" variant="outline" onClick={() => updatePlayerScore(player.id, -100)} className="backdrop-blur-sm" title="Subtract $100">
                           <Minus className="h-3 w-3 mr-1" />
                           $100
+                        </Button>
+                      </div>
+                      {/* Custom Score Entry */}
+                      <div className="flex gap-1 mt-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => applyCustomScore(player.id, false)} 
+                          className="backdrop-blur-sm px-2"
+                          title="Subtract custom amount"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          placeholder="Custom"
+                          value={customScores[player.id] || ""}
+                          onChange={(e) => setCustomScores(prev => ({ ...prev, [player.id]: e.target.value }))}
+                          className="h-8 w-20 text-center text-sm px-1"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              applyCustomScore(player.id, true);
+                            }
+                          }}
+                        />
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => applyCustomScore(player.id, true)} 
+                          className="backdrop-blur-sm px-2"
+                          title="Add custom amount"
+                        >
+                          <Plus className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
