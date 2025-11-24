@@ -175,11 +175,16 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
   const checkBuzzerStatus = (state: GameState) => {
     const isInQueue = state.buzzerQueue?.some((b: any) => b.playerId === playerId);
+    const queueIsEmpty = !state.buzzerQueue || state.buzzerQueue.length === 0;
+    
     if (isInQueue) {
       setHasBuzzed(true);
-    } else {
+    } else if (queueIsEmpty) {
+      // Only reset hasBuzzed when queue is explicitly cleared (new question)
       setHasBuzzed(false);
     }
+    // If queue has items but we're not in it, keep our current hasBuzzed state
+    // (prevents flickering due to race conditions)
   };
 
   const playBuzzerSound = () => {
@@ -605,19 +610,19 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
       <Dialog open={questionVisible && !!gameState?.currentQuestion} onOpenChange={() => {}}>
         <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 flex flex-col p-6 relative overflow-hidden">
           {/* Buzzer Button - Bottom Left */}
-          <div className="absolute bottom-6 left-6 z-10">
+          <div className="absolute bottom-8 left-8 z-10">
             <button
               onClick={buzz}
               disabled={!gameState?.buzzerActive || hasBuzzed}
-              className={`flex items-center gap-3 px-6 py-4 rounded-2xl text-xl font-bold transition-all backdrop-blur-md border-2 shadow-lg ${
+              className={`flex items-center gap-4 px-10 py-6 rounded-3xl text-3xl font-bold transition-all backdrop-blur-md border-4 shadow-2xl ${
                 hasBuzzed
-                  ? "bg-yellow-500/30 border-yellow-400 text-yellow-300"
+                  ? "bg-yellow-500/40 border-yellow-400 text-yellow-200 scale-95"
                   : gameState?.buzzerActive
-                    ? "bg-red-600/70 border-red-400 text-white hover:bg-red-500/80 hover:scale-105 cursor-pointer animate-pulse"
+                    ? "bg-red-600/80 border-red-400 text-white hover:bg-red-500/90 hover:scale-110 cursor-pointer animate-pulse shadow-red-500/50"
                     : "bg-gray-600/30 border-gray-500/30 text-gray-500 cursor-not-allowed"
               }`}
             >
-              <Bell className={`h-7 w-7 ${hasBuzzed ? "" : "animate-bounce"}`} />
+              <Bell className={`h-10 w-10 ${hasBuzzed ? "" : "animate-bounce"}`} />
               <span>{hasBuzzed ? "✓ BUZZED!" : "BUZZ IN"}</span>
             </button>
           </div>
