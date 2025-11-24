@@ -514,16 +514,16 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 <CardHeader className="py-1 flex-shrink-0">
                   <CardTitle className="text-center text-sm">Game Board</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col p-2 min-h-0">
-                  <div className="grid gap-1 w-full flex-1" style={{ gridTemplateRows: `auto repeat(5, 1fr)` }}>
+                <CardContent className="flex-1 flex flex-col min-h-0 pb-3">
+                  <div className="grid gap-1.5 w-full flex-1" style={{ gridTemplateRows: `auto repeat(5, 1fr)` }}>
                     {/* Category Headers */}
                     <div 
-                      className="grid gap-1"
+                      className="grid gap-1.5"
                       style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
                     >
                       {gameState.categories.map((category) => (
-                        <div key={category.id} className="bg-gray-600/50 p-1.5 text-center rounded backdrop-blur-md border border-white/10 min-w-0">
-                          <h2 className="text-xs font-bold uppercase truncate text-white" title={category.name}>{category.name}</h2>
+                        <div key={category.id} className="bg-gray-600/50 p-2 text-center rounded-lg backdrop-blur-md border border-white/10 min-w-0">
+                          <h2 className="text-sm font-bold uppercase truncate text-white" title={category.name}>{category.name}</h2>
                         </div>
                       ))}
                     </div>
@@ -532,7 +532,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                     {[0, 1, 2, 3, 4].map((rowIndex) => (
                       <div 
                         key={rowIndex} 
-                        className="grid gap-1"
+                        className="grid gap-1.5"
                         style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
                       >
                         {gameState.categories.map((category) => {
@@ -540,7 +540,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                           return (
                             <div
                               key={question.id}
-                              className={`flex items-center justify-center text-lg lg:text-2xl xl:text-3xl font-bold rounded text-center backdrop-blur-md border min-w-0 ${
+                              className={`flex items-center justify-center text-lg lg:text-2xl xl:text-3xl font-bold rounded-lg text-center backdrop-blur-md border min-w-0 ${
                                 question.answered
                                   ? "bg-white/10 text-gray-500 border-white/10"
                                   : "bg-primary/80 text-primary-foreground border-white/20"
