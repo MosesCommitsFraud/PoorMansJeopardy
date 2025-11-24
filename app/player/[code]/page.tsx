@@ -317,18 +317,32 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     }
   };
 
-  // Handle keyboard buzzer (spacebar)
+  // Handle keyboard buzzer (spacebar) - always prevent scroll
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === "Space" && gameState?.buzzerActive && !hasBuzzed) {
-        e.preventDefault();
-        buzz();
+      if (e.code === "Space") {
+        e.preventDefault(); // Always prevent spacebar scroll
+        if (gameState?.buzzerActive && !hasBuzzed) {
+          buzz();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [gameState?.buzzerActive, hasBuzzed]);
+
+  // Disable body scroll when question modal is open
+  useEffect(() => {
+    if (questionVisible && gameState?.currentQuestion) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [questionVisible, gameState?.currentQuestion]);
 
   const leaveGame = () => {
     setAlertMessage("Are you sure you want to leave the game?");
