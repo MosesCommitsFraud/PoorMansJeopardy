@@ -87,17 +87,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   });
 
   // Polling is now just a backup - P2P handles real-time sync
-  const getPollingInterval = () => {
-    // If P2P is connected, poll very slowly (just for consistency checks)
-    if (isPeerConnected) {
-      return 10000; // 10 seconds when P2P is working
-    }
-    // Fallback to faster polling if P2P fails
-    if (gameState?.currentQuestion || gameState?.buzzerActive) {
-      return 500; // Fast polling during active question/buzzer
-    }
-    return 3000; // Slower polling when idle
-  };
+  const isPeerConnectedRef = useRef(isPeerConnected);
+  useEffect(() => {
+    isPeerConnectedRef.current = isPeerConnected;
+  }, [isPeerConnected]);
 
   useEffect(() => {
     if (playerId) {
@@ -106,6 +99,9 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
       let timeoutId: NodeJS.Timeout;
       
       const pollVersion = async () => {
+        // Determine interval based on P2P connection status
+        const interval = isPeerConnectedRef.current ? 45000 : 2000; // 45s when P2P works, 2s fallback
+        
         try {
           const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
           const data = await response.json();
@@ -118,16 +114,16 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
           console.error("Error checking version:", error);
         }
         
-        // Schedule next poll with adaptive interval
-        timeoutId = setTimeout(pollVersion, getPollingInterval());
+        // Schedule next poll
+        timeoutId = setTimeout(pollVersion, interval);
       };
       
-      // Start polling
-      timeoutId = setTimeout(pollVersion, getPollingInterval());
+      // Initial poll after short delay
+      timeoutId = setTimeout(pollVersion, isPeerConnectedRef.current ? 45000 : 2000);
       
       return () => clearTimeout(timeoutId);
     }
-  }, [playerId, currentVersion, gameState?.currentQuestion, gameState?.buzzerActive]);
+  }, [playerId, resolvedParams.code]);
 
   const loadGameState = async () => {
     const response = await fetch(`/api/lobby/${resolvedParams.code}`);

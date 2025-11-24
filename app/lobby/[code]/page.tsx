@@ -101,17 +101,25 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   });
 
   const isPeerConnected = isHost ? isHostPeerConnected : isPlayerPeerConnected;
+  
+  // Use ref to avoid effect re-runs when P2P status changes
+  const isPeerConnectedRef = useRef(isPeerConnected);
+  useEffect(() => {
+    isPeerConnectedRef.current = isPeerConnected;
+  }, [isPeerConnected]);
 
   useEffect(() => {
     const hostId = localStorage.getItem("jeopardy_host_id");
     loadLobby(hostId);
     
     // Polling is now backup - P2P handles real-time sync
-    const interval = setInterval(async () => {
-      if (lobby?.gameState?.gameStarted) return;
+    let timeoutId: NodeJS.Timeout;
+    
+    const pollVersion = async () => {
+      if (lobbyRef.current?.gameState?.gameStarted) return;
       
-      // If P2P is connected, poll very slowly
-      const pollInterval = isPeerConnected ? 10000 : 2000;
+      // Determine interval based on P2P connection status
+      const interval = isPeerConnectedRef.current ? 45000 : 2000; // 45s when P2P works, 2s fallback
       
       try {
         const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
@@ -123,10 +131,16 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
       } catch (error) {
         console.error("Error checking version:", error);
       }
-    }, isPeerConnected ? 10000 : 2000);
+      
+      // Schedule next poll
+      timeoutId = setTimeout(pollVersion, interval);
+    };
     
-    return () => clearInterval(interval);
-  }, [currentVersion, lobby?.gameState?.gameStarted, isPeerConnected]);
+    // Initial poll after short delay
+    timeoutId = setTimeout(pollVersion, isPeerConnectedRef.current ? 45000 : 2000);
+    
+    return () => clearTimeout(timeoutId);
+  }, [resolvedParams.code]);
 
   const loadLobby = async (hostId: string | null) => {
     try {
