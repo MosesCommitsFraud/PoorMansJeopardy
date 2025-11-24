@@ -592,11 +592,15 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                           <Minus className="h-3 w-3" />
                         </Button>
                         <Input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           placeholder="Custom"
                           value={customScores[player.id] || ""}
-                          onChange={(e) => setCustomScores(prev => ({ ...prev, [player.id]: e.target.value }))}
-                          className="h-8 w-20 text-center text-sm px-1"
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9-]/g, '');
+                            setCustomScores(prev => ({ ...prev, [player.id]: val }));
+                          }}
+                          className="h-8 w-20 text-center text-sm px-1 [appearance:textfield]"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               applyCustomScore(player.id, true);
