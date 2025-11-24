@@ -474,10 +474,13 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                   <div className="pt-2 border-t border-white/20">
                     <div className="text-[10px] opacity-80 uppercase tracking-wide">Rank</div>
                     <div className="text-2xl font-bold text-yellow-400">
-                      #{(gameState?.players
-                        ? gameState.players.sort((a, b) => b.score - a.score)
-                        .findIndex(p => p.id === playerId) + 1 
-                        : 0) || "?"}
+                      #{(() => {
+                        if (!gameState?.players || !currentPlayer) return "?";
+                        const sorted = [...gameState.players].sort((a, b) => b.score - a.score);
+                        const myScore = currentPlayer.score;
+                        // Rank is 1 + count of players with higher score
+                        return sorted.filter(p => p.score > myScore).length + 1;
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -547,10 +550,12 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto">
                 <div className="space-y-2">
-                  {gameState?.players
-                    .sort((a, b) => b.score - a.score)
-                    .map((player, index) => {
-                      const winCount = gameState.playerWins?.[player.id] || 0;
+                  {(() => {
+                    const sorted = [...(gameState?.players || [])].sort((a, b) => b.score - a.score);
+                    return sorted.map((player) => {
+                      const winCount = gameState?.playerWins?.[player.id] || 0;
+                      // Calculate rank: 1 + count of players with higher score (handles ties)
+                      const rank = sorted.filter(p => p.score > player.score).length + 1;
                       return (
                         <div
                           key={player.id}
@@ -561,11 +566,11 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
                               <div className={`text-base font-bold ${
-                                index === 0 ? "text-yellow-400" :
-                                index === 1 ? "text-gray-300" :
-                                index === 2 ? "text-orange-400" : "text-gray-400"
+                                rank === 1 ? "text-yellow-400" :
+                                rank === 2 ? "text-gray-300" :
+                                rank === 3 ? "text-orange-400" : "text-gray-400"
                               }`}>
-                                #{index + 1}
+                                #{rank}
                               </div>
                               <div className={`text-base font-bold ${
                                 player.score > 0 ? 'text-green-500' : player.score < 0 ? 'text-red-500' : 'text-white'
@@ -587,7 +592,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                           </div>
                         </div>
                       );
-                    })}
+                    });
+                  })()}
                 </div>
               </CardContent>
             </Card>
