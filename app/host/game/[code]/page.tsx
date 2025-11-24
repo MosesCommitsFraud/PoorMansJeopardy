@@ -41,6 +41,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [timerDuration, setTimerDuration] = useState(30);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [customScores, setCustomScores] = useState<Record<string, string>>({});
+  const [markedCorrectIndex, setMarkedCorrectIndex] = useState<number | null>(null); // Index in buzzer queue of player marked correct
   const gameStateRef = useRef<GameState | null>(null);
   const currentVersionRef = useRef(0);
 
@@ -314,12 +315,16 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       
       setSelectedQuestion(null);
       setShowAnswer(false);
+      setMarkedCorrectIndex(null);
     }
   };
 
-  const closeQuestion = async () => {
-    // Close AND mark as answered
+  const closeQuestion = async (applyAllWrong: boolean = false) => {
+    // Close AND mark as answered, applying any pending score changes
     if (selectedQuestion && gameState) {
+      // Apply buzzer scores if any
+      const updatedPlayers = await applyBuzzerScores(applyAllWrong);
+      
       const updatedCategories = gameState.categories.map(cat => ({
         ...cat,
         questions: cat.questions.map(q => 
@@ -331,11 +336,13 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         categories: updatedCategories,
         currentQuestion: null,
         buzzerQueue: [],
-        showAnswerToPlayers: false
+        showAnswerToPlayers: false,
+        ...(updatedPlayers ? { players: updatedPlayers } : {})
       });
       
       setSelectedQuestion(null);
       setShowAnswer(false);
+      setMarkedCorrectIndex(null);
     }
   };
 
@@ -382,56 +389,19 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     await updatePlayerScore(playerId, add ? value : -value);
   };
 
-  // Handle when host marks a player's answer as correct
-  // - Give points to the correct player
-  // - Subtract points from all players who buzzed BEFORE them (they answered wrong)
-  // - Players after them in queue don't lose points (haven't answered yet)
-  const handleCorrectAnswer = async (correctPlayerId: string, correctPlayerIndex: number) => {
-    const currentState = gameStateRef.current;
-    if (!currentState || !selectedQuestion) return;
-    
-    const points = selectedQuestion.value;
-    const buzzerQueue = currentState.buzzerQueue || [];
-    
-    // Build updated players list
-    const updatedPlayers = currentState.players.map(player => {
-      if (player.id === correctPlayerId) {
-        // Correct answer - add points
-        return { ...player, score: player.score + points };
-      }
-      
-      // Check if this player buzzed before the correct player
-      const playerQueueIndex = buzzerQueue.findIndex(b => b.playerId === player.id);
-      if (playerQueueIndex !== -1 && playerQueueIndex < correctPlayerIndex) {
-        // They buzzed before and got it wrong - subtract points
-        return { ...player, score: player.score - points };
-      }
-      
-      return player;
-    });
-    
-    // Update state with new scores and clear buzzer queue
-    const newState = { 
-      ...currentState, 
-      players: updatedPlayers,
-      buzzerQueue: [] // Clear queue after scoring
-    };
-    
-    setGameState(newState);
-    gameStateRef.current = newState;
-    await persistAndBroadcast(newState);
+  // Toggle marking a player as correct (for visual feedback before closing)
+  const toggleCorrectMark = (index: number) => {
+    if (markedCorrectIndex === index) {
+      // Undo - clear the mark
+      setMarkedCorrectIndex(null);
+    } else {
+      // Mark this player as correct
+      setMarkedCorrectIndex(index);
+    }
   };
 
-  // Handle when host marks a player's answer as wrong
-  // - Just subtract points from that player
-  const handleWrongAnswer = async (playerId: string) => {
-    if (!selectedQuestion) return;
-    await updatePlayerScore(playerId, -selectedQuestion.value);
-  };
-
-  // Handle when all buzzed players got it wrong
-  // - Subtract points from everyone in the buzzer queue
-  const handleAllWrong = async () => {
+  // Apply scores based on marks when closing question
+  const applyBuzzerScores = async (allWrong: boolean = false) => {
     const currentState = gameStateRef.current;
     if (!currentState || !selectedQuestion) return;
     
@@ -440,27 +410,39 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     
     if (buzzerQueue.length === 0) return;
     
-    // Get all player IDs who buzzed
-    const buzzedPlayerIds = new Set(buzzerQueue.map(b => b.playerId));
+    let updatedPlayers = [...currentState.players];
     
-    // Subtract points from all who buzzed
-    const updatedPlayers = currentState.players.map(player => {
-      if (buzzedPlayerIds.has(player.id)) {
-        return { ...player, score: player.score - points };
-      }
-      return player;
-    });
+    if (allWrong) {
+      // All players who buzzed get points subtracted
+      const buzzedPlayerIds = new Set(buzzerQueue.map(b => b.playerId));
+      updatedPlayers = updatedPlayers.map(player => {
+        if (buzzedPlayerIds.has(player.id)) {
+          return { ...player, score: player.score - points };
+        }
+        return player;
+      });
+    } else if (markedCorrectIndex !== null) {
+      // Apply scoring based on who was marked correct
+      const correctPlayerId = buzzerQueue[markedCorrectIndex]?.playerId;
+      
+      updatedPlayers = updatedPlayers.map(player => {
+        if (player.id === correctPlayerId) {
+          // Correct answer - add points
+          return { ...player, score: player.score + points };
+        }
+        
+        // Check if this player buzzed before the correct player
+        const playerQueueIndex = buzzerQueue.findIndex(b => b.playerId === player.id);
+        if (playerQueueIndex !== -1 && playerQueueIndex < markedCorrectIndex) {
+          // They buzzed before and got it wrong - subtract points
+          return { ...player, score: player.score - points };
+        }
+        
+        return player;
+      });
+    }
     
-    // Update state with new scores and clear buzzer queue
-    const newState = { 
-      ...currentState, 
-      players: updatedPlayers,
-      buzzerQueue: [] // Clear queue after scoring
-    };
-    
-    setGameState(newState);
-    gameStateRef.current = newState;
-    await persistAndBroadcast(newState);
+    return updatedPlayers;
   };
 
   const endGame = () => {
@@ -784,7 +766,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
       {/* Question Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && dismissQuestion()}>
-        <DialogContent className="max-w-5xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
+        <DialogContent className="max-w-6xl w-[95vw] h-[85vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center justify-between">
               <span>Question Worth: ${selectedQuestion?.value}</span>
@@ -902,9 +884,16 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     {gameState?.showAnswerToPlayers ? "Answer Shown" : "Show Answer to Players"}
                   </Button>
                 </div>
-                <Button onClick={closeQuestion} variant="destructive" size="sm" className="w-full">
-                  Close & Mark Complete
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={() => closeQuestion(false)} variant="destructive" size="sm" className="flex-1">
+                    Close & Apply Scores
+                  </Button>
+                  {(gameState?.buzzerQueue || []).length > 0 && markedCorrectIndex === null && (
+                    <Button onClick={() => closeQuestion(true)} variant="destructive" size="sm" className="flex-1">
+                      All Wrong & Close
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -927,48 +916,90 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {(gameState?.buzzerQueue || []).map((buzz, index) => (
-                    <div key={index} className="bg-gray-700/30 backdrop-blur-sm border border-gray-600/30 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-lg font-bold ${index === 0 ? 'text-yellow-400' : 'text-gray-400'}`}>
-                          #{index + 1}
-                        </span>
-                        <span className="font-semibold flex-1 truncate">{buzz.playerName}</span>
-                        {index === 0 && <Badge variant="secondary" className="text-xs">First</Badge>}
+                  {(gameState?.buzzerQueue || []).map((buzz, index) => {
+                    const isMarkedCorrect = markedCorrectIndex === index;
+                    const isMarkedWrong = markedCorrectIndex !== null && index < markedCorrectIndex;
+                    const isDisabled = markedCorrectIndex !== null && index > markedCorrectIndex;
+                    
+                    return (
+                      <div 
+                        key={index} 
+                        className={`backdrop-blur-sm rounded-lg p-3 transition-all ${
+                          isMarkedCorrect 
+                            ? 'bg-green-600/40 border-2 border-green-400' 
+                            : isMarkedWrong 
+                              ? 'bg-red-600/30 border border-red-400/50 opacity-60' 
+                              : isDisabled
+                                ? 'bg-gray-700/20 border border-gray-600/30 opacity-40'
+                                : 'bg-gray-700/30 border border-gray-600/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`text-lg font-bold ${
+                            isMarkedCorrect ? 'text-green-300' :
+                            isMarkedWrong ? 'text-red-400' :
+                            index === 0 ? 'text-yellow-400' : 'text-gray-400'
+                          }`}>
+                            #{index + 1}
+                          </span>
+                          <span className={`font-semibold flex-1 truncate ${
+                            isMarkedCorrect ? 'text-green-200' :
+                            isMarkedWrong ? 'text-red-300' : ''
+                          }`}>{buzz.playerName}</span>
+                          {isMarkedCorrect && <Badge className="text-xs bg-green-500">+${selectedQuestion?.value}</Badge>}
+                          {isMarkedWrong && <Badge variant="destructive" className="text-xs">-${selectedQuestion?.value}</Badge>}
+                          {!isMarkedCorrect && !isMarkedWrong && index === 0 && <Badge variant="secondary" className="text-xs">First</Badge>}
+                        </div>
+                        
+                        {!isMarkedWrong && !isDisabled && (
+                          <Button
+                            size="sm"
+                            variant={isMarkedCorrect ? "outline" : "default"}
+                            className={`w-full h-9 group ${
+                              isMarkedCorrect 
+                                ? 'border-green-400 text-green-300 hover:bg-green-600/30' 
+                                : 'bg-green-600 hover:bg-green-500'
+                            }`}
+                            onClick={() => toggleCorrectMark(index)}
+                          >
+                            {isMarkedCorrect ? (
+                              <>
+                                <span className="group-hover:hidden">✓ Marked Correct</span>
+                                <span className="hidden group-hover:inline">↩ Undo</span>
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-4 w-4 mr-1" />
+                                Correct
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        
+                        {isMarkedWrong && (
+                          <div className="text-center text-sm text-red-400 font-medium">
+                            Wrong (answered before correct)
+                          </div>
+                        )}
+                        
+                        {isDisabled && (
+                          <div className="text-center text-sm text-gray-500 font-medium">
+                            Not yet answered
+                          </div>
+                        )}
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          className="flex-1 h-8 bg-green-600 hover:bg-green-500"
-                          onClick={() => handleCorrectAnswer(buzz.playerId, index)}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Correct
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="flex-1 h-8"
-                          onClick={() => handleWrongAnswer(buzz.playerId)}
-                        >
-                          <Minus className="h-3 w-3 mr-1" />
-                          Wrong
-                        </Button>
+                    );
+                  })}
+                  
+                  {/* Score preview */}
+                  {markedCorrectIndex !== null && (
+                    <div className="mt-3 p-3 bg-blue-500/20 border border-blue-400/30 rounded-lg">
+                      <div className="text-xs font-semibold text-blue-300 mb-1">SCORE PREVIEW</div>
+                      <div className="text-sm text-blue-200">
+                        Scores will be applied when you close the question.
                       </div>
                     </div>
-                  ))}
-                  
-                  {/* All Wrong Button */}
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="w-full mt-3"
-                    onClick={handleAllWrong}
-                  >
-                    <Minus className="h-4 w-4 mr-2" />
-                    All Wrong (-${selectedQuestion?.value} each)
-                  </Button>
+                  )}
                 </div>
               )}
               
