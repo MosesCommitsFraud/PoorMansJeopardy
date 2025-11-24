@@ -540,7 +540,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                           return (
                             <div
                               key={question.id}
-                              className={`aspect-[4/3] flex items-center justify-center text-lg lg:text-2xl xl:text-3xl font-bold rounded text-center backdrop-blur-md border min-w-0 ${
+                              className={`aspect-[5/2] flex items-center justify-center text-lg lg:text-2xl xl:text-3xl font-bold rounded text-center backdrop-blur-md border min-w-0 ${
                                 question.answered
                                   ? "bg-white/10 text-gray-500 border-white/10"
                                   : "bg-primary/80 text-primary-foreground border-white/20"

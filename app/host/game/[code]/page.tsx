@@ -734,7 +734,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                       <button
                         onClick={() => selectQuestion(category.id, question.id)}
                         disabled={question.answered}
-                        className={`w-full aspect-[4/3] flex items-center justify-center text-xl lg:text-2xl xl:text-3xl font-bold rounded-lg transition-all backdrop-blur-md border ${
+                        className={`w-full aspect-[5/2] flex items-center justify-center text-xl lg:text-2xl xl:text-3xl font-bold rounded-lg transition-all backdrop-blur-md border ${
                           question.answered
                             ? "bg-white/10 text-gray-500 cursor-not-allowed border-white/10"
                             : "bg-primary/80 text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-md border-white/20"
