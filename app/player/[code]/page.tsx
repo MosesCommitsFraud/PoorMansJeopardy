@@ -397,6 +397,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         isHost={false}
         onReturnToLobby={returnToLobby}
         playerWins={gameState.playerWins}
+        questionScoring={gameState.questionScoring}
+        categories={gameState.categories}
       />
     );
   }

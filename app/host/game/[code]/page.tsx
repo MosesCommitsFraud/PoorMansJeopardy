@@ -621,6 +621,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         onReturnToLobby={returnToLobby}
         onCloseLobby={confirmCloseLobby}
         playerWins={gameState.playerWins}
+        questionScoring={gameState.questionScoring}
+        categories={gameState.categories}
       />
     );
   }
