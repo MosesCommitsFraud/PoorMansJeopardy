@@ -382,6 +382,87 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     await updatePlayerScore(playerId, add ? value : -value);
   };
 
+  // Handle when host marks a player's answer as correct
+  // - Give points to the correct player
+  // - Subtract points from all players who buzzed BEFORE them (they answered wrong)
+  // - Players after them in queue don't lose points (haven't answered yet)
+  const handleCorrectAnswer = async (correctPlayerId: string, correctPlayerIndex: number) => {
+    const currentState = gameStateRef.current;
+    if (!currentState || !selectedQuestion) return;
+    
+    const points = selectedQuestion.value;
+    const buzzerQueue = currentState.buzzerQueue || [];
+    
+    // Build updated players list
+    const updatedPlayers = currentState.players.map(player => {
+      if (player.id === correctPlayerId) {
+        // Correct answer - add points
+        return { ...player, score: player.score + points };
+      }
+      
+      // Check if this player buzzed before the correct player
+      const playerQueueIndex = buzzerQueue.findIndex(b => b.playerId === player.id);
+      if (playerQueueIndex !== -1 && playerQueueIndex < correctPlayerIndex) {
+        // They buzzed before and got it wrong - subtract points
+        return { ...player, score: player.score - points };
+      }
+      
+      return player;
+    });
+    
+    // Update state with new scores and clear buzzer queue
+    const newState = { 
+      ...currentState, 
+      players: updatedPlayers,
+      buzzerQueue: [] // Clear queue after scoring
+    };
+    
+    setGameState(newState);
+    gameStateRef.current = newState;
+    await persistAndBroadcast(newState);
+  };
+
+  // Handle when host marks a player's answer as wrong
+  // - Just subtract points from that player
+  const handleWrongAnswer = async (playerId: string) => {
+    if (!selectedQuestion) return;
+    await updatePlayerScore(playerId, -selectedQuestion.value);
+  };
+
+  // Handle when all buzzed players got it wrong
+  // - Subtract points from everyone in the buzzer queue
+  const handleAllWrong = async () => {
+    const currentState = gameStateRef.current;
+    if (!currentState || !selectedQuestion) return;
+    
+    const points = selectedQuestion.value;
+    const buzzerQueue = currentState.buzzerQueue || [];
+    
+    if (buzzerQueue.length === 0) return;
+    
+    // Get all player IDs who buzzed
+    const buzzedPlayerIds = new Set(buzzerQueue.map(b => b.playerId));
+    
+    // Subtract points from all who buzzed
+    const updatedPlayers = currentState.players.map(player => {
+      if (buzzedPlayerIds.has(player.id)) {
+        return { ...player, score: player.score - points };
+      }
+      return player;
+    });
+    
+    // Update state with new scores and clear buzzer queue
+    const newState = { 
+      ...currentState, 
+      players: updatedPlayers,
+      buzzerQueue: [] // Clear queue after scoring
+    };
+    
+    setGameState(newState);
+    gameStateRef.current = newState;
+    await persistAndBroadcast(newState);
+  };
+
   const endGame = () => {
     setAlertMessage("Are you sure you want to end the game? This will show the final scores and winner.");
     setConfirmAction("endGame");
@@ -703,7 +784,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
       {/* Question Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && dismissQuestion()}>
-        <DialogContent className="max-w-3xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
+        <DialogContent className="max-w-5xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center justify-between">
               <span>Question Worth: ${selectedQuestion?.value}</span>
@@ -712,152 +793,204 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               </Badge>
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
-            <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-4 rounded-lg">
-              <div className="text-sm font-semibold text-gray-300 mb-2">QUESTION:</div>
-              <div className={`font-bold break-words ${
-                (selectedQuestion?.question?.length || 0) > 200 
-                  ? 'text-base' 
-                  : (selectedQuestion?.question?.length || 0) > 100 
-                    ? 'text-lg' 
-                    : 'text-xl'
-              }`}>{selectedQuestion?.question}</div>
-              {selectedQuestion?.questionImageUrl && (
-                <div className="mt-3 flex justify-center">
-                  <img 
-                    src={selectedQuestion.questionImageUrl} 
-                    alt="Question" 
-                    className="max-w-full max-h-48 rounded-lg object-contain"
-                  />
-                </div>
-              )}
-            </div>
-            
-            {showAnswer && (
+          
+          <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
+            {/* Left Column - Question & Controls */}
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
               <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-4 rounded-lg">
-                <div className="text-sm font-semibold text-gray-300 mb-2">ANSWER:</div>
+                <div className="text-sm font-semibold text-gray-300 mb-2">QUESTION:</div>
                 <div className={`font-bold break-words ${
-                  (selectedQuestion?.answer?.length || 0) > 100 
+                  (selectedQuestion?.question?.length || 0) > 200 
                     ? 'text-base' 
-                    : 'text-xl'
-                }`}>{selectedQuestion?.answer}</div>
-                {selectedQuestion?.answerImageUrl && (
+                    : (selectedQuestion?.question?.length || 0) > 100 
+                      ? 'text-lg' 
+                      : 'text-xl'
+                }`}>{selectedQuestion?.question}</div>
+                {selectedQuestion?.questionImageUrl && (
                   <div className="mt-3 flex justify-center">
                     <img 
-                      src={selectedQuestion.answerImageUrl} 
-                      alt="Answer" 
-                      className="max-w-full max-h-48 rounded-lg object-contain"
+                      src={selectedQuestion.questionImageUrl} 
+                      alt="Question" 
+                      className="max-w-full max-h-40 rounded-lg object-contain"
                     />
                   </div>
                 )}
               </div>
-            )}
-            
-            {/* Timer Controls */}
-            <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-4 rounded-lg">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  <span className="font-semibold">Timer</span>
-                </div>
-                {gameState?.timerEndAt && (
-                  <div className={`text-3xl font-bold tabular-nums ${
-                    currentTime <= 5 ? 'text-red-500 animate-pulse' : 'text-white'
-                  }`}>
-                    {Math.floor(currentTime / 60)}:{(currentTime % 60).toString().padStart(2, '0')}
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2 items-center">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={timerDuration}
-                    onChange={(e) => setTimerDuration(Math.max(1, parseInt(e.target.value) || 1))}
-                    onBlur={() => setTimerDurationInState(timerDuration)}
-                    className="w-20 h-9 text-sm"
-                    min="1"
-                    max="999"
-                  />
-                  <span className="text-sm text-muted-foreground">seconds</span>
-                </div>
-                <div className="flex gap-2 ml-auto">
-                  {!gameState?.timerEndAt ? (
-                    <Button onClick={startTimer} size="sm" variant="outline">
-                      <Play className="mr-2 h-4 w-4" />
-                      Start Timer
-                    </Button>
-                  ) : (
-                    <Button onClick={stopTimer} size="sm" variant="outline">
-                      <Pause className="mr-2 h-4 w-4" />
-                      Stop Timer
-                    </Button>
+              
+              {showAnswer && (
+                <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-4 rounded-lg">
+                  <div className="text-sm font-semibold text-gray-300 mb-2">ANSWER:</div>
+                  <div className={`font-bold break-words ${
+                    (selectedQuestion?.answer?.length || 0) > 100 
+                      ? 'text-base' 
+                      : 'text-xl'
+                  }`}>{selectedQuestion?.answer}</div>
+                  {selectedQuestion?.answerImageUrl && (
+                    <div className="mt-3 flex justify-center">
+                      <img 
+                        src={selectedQuestion.answerImageUrl} 
+                        alt="Answer" 
+                        className="max-w-full max-h-40 rounded-lg object-contain"
+                      />
+                    </div>
                   )}
-                  <Button onClick={resetTimer} size="sm" variant="outline">
-                    <RotateCcw className="h-4 w-4" />
+                </div>
+              )}
+              
+              {/* Timer Controls */}
+              <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-3 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span className="font-semibold text-sm">Timer</span>
+                  </div>
+                  {gameState?.timerEndAt && (
+                    <div className={`text-2xl font-bold tabular-nums ${
+                      currentTime <= 5 ? 'text-red-500 animate-pulse' : 'text-white'
+                    }`}>
+                      {Math.floor(currentTime / 60)}:{(currentTime % 60).toString().padStart(2, '0')}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-2 items-center">
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      value={timerDuration}
+                      onChange={(e) => setTimerDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                      onBlur={() => setTimerDurationInState(timerDuration)}
+                      className="w-16 h-8 text-sm"
+                      min="1"
+                      max="999"
+                    />
+                    <span className="text-xs text-muted-foreground">sec</span>
+                  </div>
+                  <div className="flex gap-1 ml-auto">
+                    {!gameState?.timerEndAt ? (
+                      <Button onClick={startTimer} size="sm" variant="outline" className="h-8 px-2">
+                        <Play className="h-3 w-3" />
+                      </Button>
+                    ) : (
+                      <Button onClick={stopTimer} size="sm" variant="outline" className="h-8 px-2">
+                        <Pause className="h-3 w-3" />
+                      </Button>
+                    )}
+                    <Button onClick={resetTimer} size="sm" variant="outline" className="h-8 px-2">
+                      <RotateCcw className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Button onClick={showToPlayers} className="flex-1" size="sm" variant={gameState?.currentQuestion?.id === selectedQuestion?.id ? "secondary" : "default"}>
+                    {gameState?.currentQuestion?.id === selectedQuestion?.id ? "Shown to Players" : "Show to Players"}
+                  </Button>
+                  <Button onClick={() => setShowAnswer(!showAnswer)} variant="outline" size="sm" className="flex-1">
+                    {showAnswer ? "Hide Answer" : "Show Answer"}
                   </Button>
                 </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={toggleAnswerToPlayers}
+                    variant={gameState?.showAnswerToPlayers ? "secondary" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    disabled={!gameState?.currentQuestion?.id}
+                  >
+                    {gameState?.showAnswerToPlayers ? "Answer Shown" : "Show Answer to Players"}
+                  </Button>
+                </div>
+                <Button onClick={closeQuestion} variant="destructive" size="sm" className="w-full">
+                  Close & Mark Complete
+                </Button>
               </div>
             </div>
             
-            {/* Buzzer Queue in Dialog */}
-            {(gameState?.buzzerQueue || []).length > 0 && (
-              <div className="bg-yellow-500/20 backdrop-blur-sm border border-yellow-400/30 p-4 rounded-lg">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-yellow-400" />
-                    <span className="font-semibold">Buzzer Queue ({(gameState?.buzzerQueue || []).length})</span>
-                  </div>
-                  <Button onClick={clearBuzzerQueue} size="sm" variant="outline">
-                    Clear
+            {/* Right Column - Buzzer Queue with Scoring */}
+            <div className="w-72 flex-shrink-0 overflow-y-auto border-l border-white/10 pl-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-5 w-5 text-yellow-400" />
+                  <span className="font-semibold">Buzzed In</span>
+                </div>
+                <Button onClick={clearBuzzerQueue} size="sm" variant="ghost" className="h-7 px-2 text-xs">
+                  Clear
+                </Button>
+              </div>
+              
+              {(gameState?.buzzerQueue || []).length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No one has buzzed yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {(gameState?.buzzerQueue || []).map((buzz, index) => (
+                    <div key={index} className="bg-gray-700/30 backdrop-blur-sm border border-gray-600/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-lg font-bold ${index === 0 ? 'text-yellow-400' : 'text-gray-400'}`}>
+                          #{index + 1}
+                        </span>
+                        <span className="font-semibold flex-1 truncate">{buzz.playerName}</span>
+                        {index === 0 && <Badge variant="secondary" className="text-xs">First</Badge>}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="flex-1 h-8 bg-green-600 hover:bg-green-500"
+                          onClick={() => handleCorrectAnswer(buzz.playerId, index)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Correct
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1 h-8"
+                          onClick={() => handleWrongAnswer(buzz.playerId)}
+                        >
+                          <Minus className="h-3 w-3 mr-1" />
+                          Wrong
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* All Wrong Button */}
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="w-full mt-3"
+                    onClick={handleAllWrong}
+                  >
+                    <Minus className="h-4 w-4 mr-2" />
+                    All Wrong (-${selectedQuestion?.value} each)
                   </Button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {(gameState?.buzzerQueue || []).map((buzz, index) => (
-                    <div key={index} className="flex items-center gap-1.5 bg-gray-700/50 backdrop-blur-sm border border-gray-600/30 rounded-full px-3 py-1.5">
-                      <span className="text-sm font-bold text-yellow-300">
-                        {index + 1}.
-                      </span>
-                      <span className="text-sm font-medium">{buzz.playerName}</span>
-                      {index === 0 && <Badge variant="secondary" className="ml-1 text-xs">First</Badge>}
+              )}
+              
+              {/* Manual Score Adjustment Section */}
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="text-xs font-semibold text-gray-400 mb-2">MANUAL ADJUST</div>
+                <div className="space-y-2">
+                  {gameState?.players.map(player => (
+                    <div key={player.id} className="flex items-center gap-2 text-sm">
+                      <span className="flex-1 truncate">{player.name}</span>
+                      <span className={`font-bold w-16 text-right ${
+                        player.score > 0 ? 'text-green-400' : player.score < 0 ? 'text-red-400' : ''
+                      }`}>${player.score}</span>
+                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => updatePlayerScore(player.id, selectedQuestion?.value || 100)}>
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => updatePlayerScore(player.id, -(selectedQuestion?.value || 100))}>
+                        <Minus className="h-3 w-3" />
+                      </Button>
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-            
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <Button onClick={showToPlayers} className="flex-1" variant={gameState?.currentQuestion?.id === selectedQuestion?.id ? "secondary" : "default"}>
-                  {gameState?.currentQuestion?.id === selectedQuestion?.id ? "Question Shown to Players" : "Show Question to Players"}
-                </Button>
-                <Button onClick={() => setShowAnswer(!showAnswer)} variant="outline" className="flex-1">
-                  {showAnswer ? "Hide Answer (Host Only)" : "Reveal Answer (Host Only)"}
-                </Button>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  onClick={toggleAnswerToPlayers}
-                  variant={gameState?.showAnswerToPlayers ? "secondary" : "outline"}
-                  className="flex-1"
-                  disabled={!gameState?.currentQuestion?.id}
-                >
-                  {gameState?.showAnswerToPlayers ? "Answer Visible to Players" : "Reveal Answer to Players"}
-                </Button>
-                <Button 
-                  onClick={clearBuzzerQueue} 
-                  variant="outline"
-                  className="flex-1"
-                  disabled={(gameState?.buzzerQueue?.length || 0) === 0}
-                >
-                  <Bell className="mr-2 h-4 w-4" />
-                  Clear Buzzer Queue {(gameState?.buzzerQueue?.length || 0) > 0 && `(${gameState?.buzzerQueue?.length})`}
-                </Button>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={closeQuestion} variant="destructive" className="flex-1">
-                  Close Question & Mark Complete
-                </Button>
               </div>
             </div>
           </div>
