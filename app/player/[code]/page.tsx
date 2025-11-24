@@ -402,8 +402,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   }
 
   return (
-    <div className="min-h-screen p-3">
-      <div className="max-w-[1800px] mx-auto">
+    <div className="h-screen flex flex-col p-3 overflow-hidden">
+      <div className="max-w-[1800px] mx-auto w-full flex flex-col flex-1 min-h-0">
         {/* Compact Header */}
         <div className="mb-3 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -436,8 +436,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         </div>
 
         {/* Compact Buzzer Banner */}
-        <Card className="mb-3">
-          <CardContent className="p-3">
+        <Card className="mb-2 flex-shrink-0">
+          <CardContent className="p-2">
             <div className="flex items-center justify-between gap-4">
               {/* Buzzer Status */}
               <div className="flex items-center gap-3">
@@ -479,7 +479,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
         </Card>
 
         {/* Main Content Grid: Score (Left) | Board (Center) | Players (Right) */}
-        <div className="grid grid-cols-12 gap-3 h-[calc(100vh-180px)]">
+        <div className="grid grid-cols-12 gap-2 flex-1 min-h-0">
           {/* Left Column: Your Score & Position */}
           <div className="col-span-1 space-y-3 flex flex-col">
             <Card className="border border-blue-400/30 flex-1 flex flex-col justify-center">
@@ -508,22 +508,22 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
           </div>
 
           {/* Center Column: Game Board */}
-          <div className="col-span-9">
+          <div className="col-span-9 min-h-0">
             {gameState?.categories && gameState.categories.length > 0 && (
               <Card className="h-full flex flex-col">
-                <CardHeader className="pb-2 flex-shrink-0">
-                  <CardTitle className="text-center text-lg">Game Board</CardTitle>
+                <CardHeader className="py-1 flex-shrink-0">
+                  <CardTitle className="text-center text-sm">Game Board</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 flex items-center justify-center">
-                  <div className="grid gap-2 w-full">
+                <CardContent className="flex-1 flex flex-col p-2 min-h-0">
+                  <div className="grid gap-1 w-full flex-1" style={{ gridTemplateRows: `auto repeat(5, 1fr)` }}>
                     {/* Category Headers */}
                     <div 
-                      className="grid gap-2"
+                      className="grid gap-1"
                       style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
                     >
                       {gameState.categories.map((category) => (
-                        <div key={category.id} className="bg-gray-600/50 p-2 text-center rounded backdrop-blur-md border border-white/10 min-w-0">
-                          <h2 className="text-xs lg:text-sm font-bold uppercase truncate text-white" title={category.name}>{category.name}</h2>
+                        <div key={category.id} className="bg-gray-600/50 p-1.5 text-center rounded backdrop-blur-md border border-white/10 min-w-0">
+                          <h2 className="text-xs font-bold uppercase truncate text-white" title={category.name}>{category.name}</h2>
                         </div>
                       ))}
                     </div>
@@ -532,7 +532,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                     {[0, 1, 2, 3, 4].map((rowIndex) => (
                       <div 
                         key={rowIndex} 
-                        className="grid gap-2"
+                        className="grid gap-1"
                         style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
                       >
                         {gameState.categories.map((category) => {
@@ -540,7 +540,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                           return (
                             <div
                               key={question.id}
-                              className={`aspect-[5/2] flex items-center justify-center text-lg lg:text-2xl xl:text-3xl font-bold rounded text-center backdrop-blur-md border min-w-0 ${
+                              className={`flex items-center justify-center text-lg lg:text-2xl xl:text-3xl font-bold rounded text-center backdrop-blur-md border min-w-0 ${
                                 question.answered
                                   ? "bg-white/10 text-gray-500 border-white/10"
                                   : "bg-primary/80 text-primary-foreground border-white/20"

@@ -576,32 +576,32 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   }
 
   return (
-    <div className="min-h-screen p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="h-screen flex flex-col p-3 overflow-hidden">
+      <div className="max-w-7xl mx-auto w-full flex flex-col flex-1 min-h-0">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-3 flex-shrink-0">
           <div className="flex justify-between items-center">
-            <div className="flex-1 flex items-center gap-3">
-              <div className="bg-card/60 backdrop-blur-md border border-border px-6 py-3 rounded-lg">
-                <h1 className="text-3xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>
+            <div className="flex-1 flex items-center gap-2">
+              <div className="bg-card/60 backdrop-blur-md border border-border px-4 py-2 rounded-lg">
+                <h1 className="text-2xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>
                   {lobbyName || `Lobby ${resolvedParams.code}`}
                 </h1>
               </div>
-              <Badge variant="secondary" className="px-3 py-1 text-sm backdrop-blur-md">
-                Host View
+              <Badge variant="secondary" className="px-2 py-1 text-xs backdrop-blur-md">
+                Host
               </Badge>
-              <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
+              <Badge variant="outline" className="px-2 py-1 text-xs font-mono backdrop-blur-md">
                 {resolvedParams.code}
               </Badge>
               {/* P2P Connection Status */}
               <Badge 
                 variant={isPeerConnected ? "default" : "secondary"} 
-                className={`px-3 py-1 text-sm backdrop-blur-md flex items-center gap-1.5 ${
+                className={`px-2 py-1 text-xs backdrop-blur-md flex items-center gap-1 ${
                   isPeerConnected ? "bg-green-600" : "bg-yellow-600"
                 }`}
               >
                 {isPeerConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
-                {isPeerConnected ? `${connectedPlayers} P2P` : "Connecting..."}
+                {isPeerConnected ? `${connectedPlayers} P2P` : "..."}
               </Badge>
             </div>
             <div className="flex gap-2">
@@ -618,7 +618,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         </div>
 
         {/* Players and Scores */}
-        <div className="mb-6">
+        <div className="mb-3 flex-shrink-0">
           <Card>
             <CardHeader>
               <CardTitle>Players & Scores</CardTitle>
@@ -701,22 +701,22 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         </div>
 
         {/* Game Board */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Game Board - Click any question to preview</span>
-              <span className="text-sm font-normal text-muted-foreground">Hover over completed questions to reopen them</span>
+        <Card className="flex-1 flex flex-col min-h-0">
+          <CardHeader className="py-2 flex-shrink-0">
+            <CardTitle className="flex items-center justify-between text-base">
+              <span>Game Board</span>
+              <span className="text-xs font-normal text-muted-foreground">Hover completed to reopen</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-          <div className="grid gap-2">
+          <CardContent className="flex-1 flex flex-col min-h-0 pb-3">
+          <div className="grid gap-1.5 flex-1" style={{ gridTemplateRows: `auto repeat(5, 1fr)` }}>
             <div 
-              className="grid gap-2"
+              className="grid gap-1.5"
               style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
             >
               {gameState.categories.map((category) => (
-                <div key={category.id} className="bg-gray-700/50 p-3 text-center rounded-lg backdrop-blur-md border border-white/10 min-w-0">
-                  <h2 className="text-base font-bold uppercase text-white truncate" title={category.name}>{category.name}</h2>
+                <div key={category.id} className="bg-gray-700/50 p-2 text-center rounded-lg backdrop-blur-md border border-white/10 min-w-0">
+                  <h2 className="text-sm font-bold uppercase text-white truncate" title={category.name}>{category.name}</h2>
                 </div>
               ))}
             </div>
@@ -724,17 +724,17 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
             {[0, 1, 2, 3, 4].map((rowIndex) => (
               <div 
                 key={rowIndex} 
-                className="grid gap-2"
+                className="grid gap-1.5"
                 style={{ gridTemplateColumns: `repeat(${gameState.categories.length}, minmax(0, 1fr))` }}
               >
                 {gameState.categories.map((category) => {
                   const question = category.questions[rowIndex];
                   return (
-                    <div key={question.id} className="relative min-w-0">
+                    <div key={question.id} className="relative min-w-0 h-full">
                       <button
                         onClick={() => selectQuestion(category.id, question.id)}
                         disabled={question.answered}
-                        className={`w-full aspect-[5/2] flex items-center justify-center text-xl lg:text-2xl xl:text-3xl font-bold rounded-lg transition-all backdrop-blur-md border ${
+                        className={`w-full h-full flex items-center justify-center text-xl lg:text-2xl xl:text-3xl font-bold rounded-lg transition-all backdrop-blur-md border ${
                           question.answered
                             ? "bg-white/10 text-gray-500 cursor-not-allowed border-white/10"
                             : "bg-primary/80 text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-md border-white/20"
