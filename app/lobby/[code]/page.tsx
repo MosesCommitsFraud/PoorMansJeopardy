@@ -38,11 +38,16 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const [lobbyName, setLobbyName] = useState("");
   const [playerId, setPlayerId] = useState<string>("");
   const lobbyRef = useRef<any>(null);
+  const currentVersionRef = useRef(0);
 
-  // Keep ref in sync
+  // Keep refs in sync
   useEffect(() => {
     lobbyRef.current = lobby;
   }, [lobby]);
+  
+  useEffect(() => {
+    currentVersionRef.current = currentVersion;
+  }, [currentVersion]);
 
   // Get player ID on mount
   useEffect(() => {
@@ -54,6 +59,11 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
   // Handle lobby updates from P2P (for players)
   const handlePeerLobbyUpdate = useCallback((newLobby: Lobby, version: number) => {
+    // Only apply if incoming version is newer
+    if (version <= currentVersionRef.current) {
+      return;
+    }
+    
     // Check if game started - redirect to game page
     if (newLobby.gameState.gameStarted) {
       const hostId = localStorage.getItem("jeopardy_host_id");
@@ -67,6 +77,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     
     setLobby(newLobby);
     setCurrentVersion(version);
+    currentVersionRef.current = version;
     setLobbyName(newLobby.lobbyName || "");
   }, [router, resolvedParams.code]);
 
@@ -110,7 +121,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
   useEffect(() => {
     const hostId = localStorage.getItem("jeopardy_host_id");
-    loadLobby(hostId);
+    loadLobby(hostId, true); // Force load on mount
     
     // Polling is now backup - P2P handles real-time sync
     let timeoutId: NodeJS.Timeout;
@@ -125,7 +136,8 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
         const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
         const data = await response.json();
         
-        if (data.version !== currentVersion) {
+        // Only fetch full state if server version is newer
+        if (data.version > currentVersionRef.current) {
           loadLobby(hostId);
         }
       } catch (error) {
@@ -142,7 +154,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     return () => clearTimeout(timeoutId);
   }, [resolvedParams.code]);
 
-  const loadLobby = async (hostId: string | null) => {
+  const loadLobby = async (hostId: string | null, force = false) => {
     try {
       const response = await fetch(`/api/lobby/${resolvedParams.code}`);
       
@@ -165,15 +177,23 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
       const data = await response.json();
 
       if (response.ok) {
+        const incomingVersion = data.version || 0;
+        
+        // Only update if incoming version is newer (or force load)
+        if (!force && incomingVersion <= currentVersionRef.current) {
+          return;
+        }
+        
         setLobby(data);
-        setCurrentVersion(data.version || 0);
+        setCurrentVersion(incomingVersion);
+        currentVersionRef.current = incomingVersion;
         setIsHost(data.hostId === hostId);
         setLobbyName(data.lobbyName || "");
         setError("");
         
         // If host, broadcast lobby state to all connected players
         if (data.hostId === hostId && isHostPeerConnected) {
-          broadcastLobby(data, data.version || 0);
+          broadcastLobby(data, incomingVersion);
         }
         
         // If game has started, redirect to game page

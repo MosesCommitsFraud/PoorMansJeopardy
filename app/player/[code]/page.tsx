@@ -43,11 +43,16 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const [questionVisible, setQuestionVisible] = useState(false);
   const [answerVisible, setAnswerVisible] = useState(false);
   const gameStateRef = useRef<GameState | null>(null);
+  const currentVersionRef = useRef(0);
 
-  // Keep ref in sync
+  // Keep refs in sync
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+  
+  useEffect(() => {
+    currentVersionRef.current = currentVersion;
+  }, [currentVersion]);
 
   useEffect(() => {
     const savedPlayerId = localStorage.getItem("jeopardy_player_id");
@@ -61,6 +66,11 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
   // Handle state updates from P2P
   const handlePeerStateUpdate = useCallback((newGameState: GameState, version: number) => {
+    // Only apply if incoming version is newer
+    if (version <= currentVersionRef.current) {
+      return;
+    }
+    
     const currentState = gameStateRef.current;
     
     // Check if host returned to lobby
@@ -71,6 +81,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     
     setGameState(newGameState);
     setCurrentVersion(version);
+    currentVersionRef.current = version;
     checkBuzzerStatus(newGameState);
   }, [router, resolvedParams.code]);
 
@@ -94,7 +105,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
   useEffect(() => {
     if (playerId) {
-      loadGameState();
+      loadGameState(true); // Force load on mount
       
       let timeoutId: NodeJS.Timeout;
       
@@ -106,8 +117,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
           const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
           const data = await response.json();
           
-          // Only fetch full state if version changed
-          if (data.version !== currentVersion) {
+          // Only fetch full state if server version is newer
+          if (data.version > currentVersionRef.current) {
             loadGameState();
           }
         } catch (error) {
@@ -125,7 +136,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     }
   }, [playerId, resolvedParams.code]);
 
-  const loadGameState = async () => {
+  const loadGameState = async (force = false) => {
     const response = await fetch(`/api/lobby/${resolvedParams.code}`);
 
     // If lobby not found (404), host probably closed it
@@ -138,17 +149,25 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     const data = await response.json();
 
     if (response.ok) {
+      const incomingVersion = data.version || 0;
+      
+      // Only update if incoming version is newer (or force load)
+      if (!force && incomingVersion <= currentVersionRef.current) {
+        return;
+      }
+      
       const newGameState = data.gameState;
 
       // Check if host returned to lobby (game was started but now isn't)
-      if (gameState?.gameStarted && !newGameState.gameStarted && !newGameState.gameEnded) {
+      if (gameStateRef.current?.gameStarted && !newGameState.gameStarted && !newGameState.gameEnded) {
         // Host returned to lobby - redirect player back to lobby
         router.push(`/lobby/${resolvedParams.code}`);
         return;
       }
 
       setGameState(newGameState);
-      setCurrentVersion(data.version || 0);
+      setCurrentVersion(incomingVersion);
+      currentVersionRef.current = incomingVersion;
       setLobbyName(data.lobbyName || "");
       checkBuzzerStatus(newGameState);
     }

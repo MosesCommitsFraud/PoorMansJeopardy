@@ -42,11 +42,16 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [customScores, setCustomScores] = useState<Record<string, string>>({});
   const gameStateRef = useRef<GameState | null>(null);
+  const currentVersionRef = useRef(0);
 
-  // Keep gameStateRef in sync
+  // Keep refs in sync
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+  
+  useEffect(() => {
+    currentVersionRef.current = currentVersion;
+  }, [currentVersion]);
 
   // Handle buzz received via P2P
   const handlePeerBuzz = useCallback((playerId: string, playerName: string) => {
@@ -103,7 +108,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   }, [isPeerConnected]);
 
   useEffect(() => {
-    loadGameState();
+    loadGameState(true); // Force load on mount
     
     let timeoutId: NodeJS.Timeout;
     
@@ -115,8 +120,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         const response = await fetch(`/api/lobby/${resolvedParams.code}/version`);
         const data = await response.json();
         
-        // Only fetch full state if version changed
-        if (data.version !== currentVersion) {
+        // Only fetch full state if server version is newer than our local version
+        if (data.version > currentVersionRef.current) {
           loadGameState();
         }
       } catch (error) {
@@ -133,17 +138,23 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     return () => clearTimeout(timeoutId);
   }, [resolvedParams.code]);
 
-  const loadGameState = async () => {
+  const loadGameState = async (force = false) => {
     const response = await fetch(`/api/lobby/${resolvedParams.code}`);
     const data = await response.json();
     
     if (response.ok) {
-      setGameState(data.gameState);
-      setCurrentVersion(data.version || 0);
-      setLobbyName(data.lobbyName || "");
+      const incomingVersion = data.version || 0;
       
-      if (data.gameState.currentQuestion) {
-        setSelectedQuestion(data.gameState.currentQuestion);
+      // Only update if incoming version is newer (or force load)
+      if (force || incomingVersion > currentVersionRef.current) {
+        setGameState(data.gameState);
+        setCurrentVersion(incomingVersion);
+        currentVersionRef.current = incomingVersion;
+        setLobbyName(data.lobbyName || "");
+        
+        if (data.gameState.currentQuestion) {
+          setSelectedQuestion(data.gameState.currentQuestion);
+        }
       }
     }
   };
@@ -222,17 +233,24 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
   // Persist to server and broadcast via P2P
   const persistAndBroadcast = async (newState: GameState) => {
+    // Optimistically bump version to prevent stale data from overwriting
+    const optimisticVersion = currentVersionRef.current + 1;
+    currentVersionRef.current = optimisticVersion;
+    
     const response = await fetch(`/api/lobby/${resolvedParams.code}/state`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ gameState: newState }),
     });
     const data = await response.json();
-    const newVersion = data.version || currentVersion + 1;
-    setCurrentVersion(newVersion);
+    const serverVersion = data.version || optimisticVersion;
+    
+    // Update to server version (should be >= our optimistic version)
+    setCurrentVersion(serverVersion);
+    currentVersionRef.current = Math.max(currentVersionRef.current, serverVersion);
     
     // Broadcast instantly to all connected players via P2P
-    broadcastState(newState, newVersion);
+    broadcastState(newState, serverVersion);
   };
 
   const updateGameState = async (updates: Partial<GameState>) => {
