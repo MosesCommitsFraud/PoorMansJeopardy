@@ -165,9 +165,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       const shuffled = availableCategories.sort(() => Math.random() - 0.5);
       const selectedCategories = shuffled.slice(0, 5);
       
-      // Generate categories using the existing function
+      // Generate categories using the existing function and add to existing
       const generatedCategories = await generateCategoriesFromDataset(selectedCategories);
-      setCategories(generatedCategories);
+      setCategories(prev => [...prev, ...generatedCategories]);
     } catch (error) {
       console.error('Error loading default game from dataset:', error);
       alert('Failed to load default game. Please try again.');
@@ -255,7 +255,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     setIsGenerating(true);
     try {
       const generatedCategories = await generateCategoriesFromDataset(selectedCategories);
-      setCategories(generatedCategories);
+      setCategories(prev => [...prev, ...generatedCategories]);
     } catch (error) {
       console.error('Error generating categories from dataset:', error);
       alert('Failed to generate categories from dataset');
