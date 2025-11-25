@@ -7,6 +7,67 @@ export interface JeopardyQuestion {
   value: string | null;
 }
 
+export interface ProcessedText {
+  text: string;
+  imageUrl?: string;
+}
+
+// Extract image URL from HTML anchor tags and clean up text
+// Handles patterns like: <a href=http://example.com/image.jpg target=_blank>Text here</a>
+export function extractImageFromHtml(text: string): ProcessedText {
+  if (!text) return { text: '' };
+  
+  let imageUrl: string | undefined;
+  let cleanedText = text;
+  
+  // Pattern to match <a href=URL>...</a> tags (with or without quotes around URL)
+  const anchorPattern = /<a\s+href=["']?([^"'\s>]+)["']?[^>]*>(.*?)<\/a>/gi;
+  
+  // Check for anchor tags with image URLs
+  const matches = [...text.matchAll(anchorPattern)];
+  
+  for (const match of matches) {
+    const url = match[1];
+    const innerText = match[2];
+    
+    // Check if the URL points to an image
+    const isImageUrl = /\.(jpg|jpeg|png|gif|webp|bmp|svg)(\?.*)?$/i.test(url) ||
+      url.includes('j-archive.com/media/') ||
+      url.includes('/images/') ||
+      url.includes('/media/');
+    
+    if (isImageUrl && !imageUrl) {
+      imageUrl = url;
+      // Replace the anchor tag with just the inner text
+      cleanedText = cleanedText.replace(match[0], innerText.trim());
+    }
+  }
+  
+  // Also handle standalone image URLs that might be in the text
+  if (!imageUrl) {
+    const urlPattern = /(https?:\/\/[^\s<>"]+\.(jpg|jpeg|png|gif|webp)(\?[^\s<>"]*)?)/gi;
+    const urlMatch = cleanedText.match(urlPattern);
+    if (urlMatch) {
+      imageUrl = urlMatch[0];
+      cleanedText = cleanedText.replace(urlMatch[0], '').trim();
+    }
+  }
+  
+  // Clean up any remaining HTML tags
+  cleanedText = cleanedText
+    .replace(/<[^>]+>/g, '') // Remove any remaining HTML tags
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+  
+  return { text: cleanedText, imageUrl };
+}
+
 export interface CategoryData {
   name: string;
   questionCount: number;
@@ -89,13 +150,21 @@ export async function generateCategoriesFromDataset(
     return {
       id: categoryId,
       name: categoryName,
-      questions: questions.map((q, qIndex) => ({
-        id: `${categoryId}-${qIndex}`,
-        question: q.question,
-        answer: q.answer,
-        value: normalizeValue(q.value, qIndex),
-        answered: false
-      }))
+      questions: questions.map((q, qIndex) => {
+        // Extract images from HTML in questions and answers
+        const processedQuestion = extractImageFromHtml(q.question);
+        const processedAnswer = extractImageFromHtml(q.answer);
+        
+        return {
+          id: `${categoryId}-${qIndex}`,
+          question: processedQuestion.text,
+          answer: processedAnswer.text,
+          value: normalizeValue(q.value, qIndex),
+          answered: false,
+          questionImageUrl: processedQuestion.imageUrl,
+          answerImageUrl: processedAnswer.imageUrl
+        };
+      })
     };
   });
 }
