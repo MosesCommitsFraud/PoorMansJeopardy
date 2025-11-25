@@ -24,6 +24,15 @@ export interface PeerSyncCallbacks {
   onError?: (error: Error) => void;
 }
 
+// Global peer instance cache to prevent duplicate connections
+// Key: lobbyCode, Value: { manager, refCount }
+const hostPeerCache = new Map<string, { manager: HostPeerManager; refCount: number }>();
+const playerPeerCache = new Map<string, { manager: PlayerPeerManager; refCount: number }>();
+
+// Cleanup timeout to delay destruction and allow for navigation
+const CLEANUP_DELAY_MS = 2000;
+const cleanupTimeouts = new Map<string, NodeJS.Timeout>();
+
 // Generate a peer ID based on lobby code
 export function getHostPeerId(lobbyCode: string): string {
   return `jeopardy-host-${lobbyCode.toUpperCase()}`;
@@ -31,6 +40,117 @@ export function getHostPeerId(lobbyCode: string): string {
 
 export function getPlayerPeerId(lobbyCode: string, playerId: string): string {
   return `jeopardy-player-${lobbyCode.toUpperCase()}-${playerId.slice(0, 8)}`;
+}
+
+// Get or create a host peer manager (singleton per lobby)
+export function getOrCreateHostPeer(
+  lobbyCode: string, 
+  callbacks: PeerSyncCallbacks
+): HostPeerManager {
+  const cacheKey = lobbyCode.toUpperCase();
+  
+  // Cancel any pending cleanup
+  const pendingCleanup = cleanupTimeouts.get(`host-${cacheKey}`);
+  if (pendingCleanup) {
+    clearTimeout(pendingCleanup);
+    cleanupTimeouts.delete(`host-${cacheKey}`);
+  }
+  
+  const cached = hostPeerCache.get(cacheKey);
+  if (cached && !cached.manager.isDestroyed) {
+    cached.refCount++;
+    cached.manager.updateCallbacks(callbacks);
+    console.log(`[PeerSync] Reusing host peer for ${cacheKey}, refCount: ${cached.refCount}`);
+    return cached.manager;
+  }
+  
+  // Create new manager
+  const manager = new HostPeerManager(lobbyCode, callbacks);
+  hostPeerCache.set(cacheKey, { manager, refCount: 1 });
+  console.log(`[PeerSync] Created new host peer for ${cacheKey}`);
+  return manager;
+}
+
+// Release a host peer (with delayed cleanup)
+export function releaseHostPeer(lobbyCode: string): void {
+  const cacheKey = lobbyCode.toUpperCase();
+  const cached = hostPeerCache.get(cacheKey);
+  
+  if (!cached) return;
+  
+  cached.refCount--;
+  console.log(`[PeerSync] Released host peer for ${cacheKey}, refCount: ${cached.refCount}`);
+  
+  if (cached.refCount <= 0) {
+    // Delay destruction to allow for navigation between pages
+    const timeout = setTimeout(() => {
+      const current = hostPeerCache.get(cacheKey);
+      if (current && current.refCount <= 0) {
+        console.log(`[PeerSync] Destroying host peer for ${cacheKey}`);
+        current.manager.destroy();
+        hostPeerCache.delete(cacheKey);
+      }
+      cleanupTimeouts.delete(`host-${cacheKey}`);
+    }, CLEANUP_DELAY_MS);
+    
+    cleanupTimeouts.set(`host-${cacheKey}`, timeout);
+  }
+}
+
+// Get or create a player peer manager (singleton per lobby+player)
+export function getOrCreatePlayerPeer(
+  lobbyCode: string,
+  playerId: string,
+  callbacks: PeerSyncCallbacks
+): PlayerPeerManager {
+  const cacheKey = `${lobbyCode.toUpperCase()}-${playerId}`;
+  
+  // Cancel any pending cleanup
+  const pendingCleanup = cleanupTimeouts.get(`player-${cacheKey}`);
+  if (pendingCleanup) {
+    clearTimeout(pendingCleanup);
+    cleanupTimeouts.delete(`player-${cacheKey}`);
+  }
+  
+  const cached = playerPeerCache.get(cacheKey);
+  if (cached && !cached.manager.isDestroyed) {
+    cached.refCount++;
+    cached.manager.updateCallbacks(callbacks);
+    console.log(`[PeerSync] Reusing player peer for ${cacheKey}, refCount: ${cached.refCount}`);
+    return cached.manager;
+  }
+  
+  // Create new manager
+  const manager = new PlayerPeerManager(lobbyCode, playerId, callbacks);
+  playerPeerCache.set(cacheKey, { manager, refCount: 1 });
+  console.log(`[PeerSync] Created new player peer for ${cacheKey}`);
+  return manager;
+}
+
+// Release a player peer (with delayed cleanup)
+export function releasePlayerPeer(lobbyCode: string, playerId: string): void {
+  const cacheKey = `${lobbyCode.toUpperCase()}-${playerId}`;
+  const cached = playerPeerCache.get(cacheKey);
+  
+  if (!cached) return;
+  
+  cached.refCount--;
+  console.log(`[PeerSync] Released player peer for ${cacheKey}, refCount: ${cached.refCount}`);
+  
+  if (cached.refCount <= 0) {
+    // Delay destruction to allow for navigation between pages
+    const timeout = setTimeout(() => {
+      const current = playerPeerCache.get(cacheKey);
+      if (current && current.refCount <= 0) {
+        console.log(`[PeerSync] Destroying player peer for ${cacheKey}`);
+        current.manager.destroy();
+        playerPeerCache.delete(cacheKey);
+      }
+      cleanupTimeouts.delete(`player-${cacheKey}`);
+    }, CLEANUP_DELAY_MS);
+    
+    cleanupTimeouts.set(`player-${cacheKey}`, timeout);
+  }
 }
 
 // Host Peer Manager - handles multiple player connections
@@ -42,17 +162,42 @@ export class HostPeerManager {
   private currentState: GameState | null = null;
   private currentLobby: Lobby | null = null;
   private currentVersion: number = 0;
-  private isDestroyed: boolean = false;
+  public isDestroyed: boolean = false;
+  private isInitialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private lastReconnectAttempt: number = 0;
+  private reconnectBackoff: number = 1000; // Start with 1 second
 
   constructor(lobbyCode: string, callbacks: PeerSyncCallbacks) {
     this.lobbyCode = lobbyCode;
     this.callbacks = callbacks;
   }
 
+  // Update callbacks (used when reusing singleton)
+  updateCallbacks(callbacks: PeerSyncCallbacks) {
+    this.callbacks = callbacks;
+    // Notify new callback of current status
+    if (this.isInitialized && this.peer?.open) {
+      this.callbacks.onConnectionStatus?.("connected");
+    }
+  }
+
   async initialize(): Promise<void> {
+    // Return existing promise if already initializing
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    
+    // Already initialized
+    if (this.isInitialized && this.peer?.open) {
+      this.callbacks.onConnectionStatus?.("connected");
+      return Promise.resolve();
+    }
+    
     if (this.isDestroyed) return;
     
-    return new Promise((resolve, reject) => {
+    this.initPromise = new Promise((resolve, reject) => {
       const peerId = getHostPeerId(this.lobbyCode);
       
       this.peer = new Peer(peerId, {
@@ -61,6 +206,8 @@ export class HostPeerManager {
 
       this.peer.on("open", (id) => {
         console.log("[PeerSync Host] Connected with ID:", id);
+        this.isInitialized = true;
+        this.reconnectBackoff = 1000; // Reset backoff on success
         this.callbacks.onConnectionStatus?.("connected");
         resolve();
       });
@@ -71,16 +218,19 @@ export class HostPeerManager {
 
       this.peer.on("error", (err) => {
         console.error("[PeerSync Host] Error:", err);
-        // If ID is taken, the host might already exist (stale connection)
+        // If ID is taken, wait and retry with same ID (let old connection time out)
         if (err.type === "unavailable-id") {
-          // Try to reconnect with a random suffix
+          console.log("[PeerSync Host] ID unavailable, will retry after backoff");
           this.peer?.destroy();
-          this.peer = new Peer(`${peerId}-${Date.now()}`, { debug: 0 });
-          this.peer.on("open", () => {
-            this.callbacks.onConnectionStatus?.("connected");
-            resolve();
+          this.peer = null;
+          
+          // Exponential backoff retry
+          this.scheduleReconnect(() => {
+            if (!this.isDestroyed) {
+              this.initPromise = null; // Allow re-initialization
+              this.initialize().then(resolve).catch(reject);
+            }
           });
-          this.peer.on("connection", (conn) => this.handleNewConnection(conn));
         } else {
           this.callbacks.onError?.(err);
           this.callbacks.onConnectionStatus?.("error");
@@ -89,13 +239,41 @@ export class HostPeerManager {
       });
 
       this.peer.on("disconnected", () => {
-        console.log("[PeerSync Host] Disconnected, attempting reconnect...");
+        console.log("[PeerSync Host] Disconnected from signaling server");
         this.callbacks.onConnectionStatus?.("disconnected");
-        if (!this.isDestroyed) {
-          this.peer?.reconnect();
+        if (!this.isDestroyed && this.peer) {
+          // Use backoff for reconnection
+          this.scheduleReconnect(() => {
+            if (!this.isDestroyed && this.peer && !this.peer.destroyed) {
+              this.peer.reconnect();
+            }
+          });
         }
       });
     });
+    
+    return this.initPromise;
+  }
+
+  private scheduleReconnect(action: () => void) {
+    // Cancel any pending reconnect
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    
+    // Rate limit: don't reconnect more than once per second
+    const now = Date.now();
+    const timeSinceLastAttempt = now - this.lastReconnectAttempt;
+    const delay = Math.max(this.reconnectBackoff, this.reconnectBackoff - timeSinceLastAttempt);
+    
+    console.log(`[PeerSync Host] Scheduling reconnect in ${delay}ms`);
+    
+    this.reconnectTimeout = setTimeout(() => {
+      this.lastReconnectAttempt = Date.now();
+      // Increase backoff for next time (max 30 seconds)
+      this.reconnectBackoff = Math.min(this.reconnectBackoff * 1.5, 30000);
+      action();
+    }, delay);
   }
 
   private handleNewConnection(conn: DataConnection) {
@@ -211,10 +389,23 @@ export class HostPeerManager {
   }
 
   destroy() {
+    console.log("[PeerSync Host] Destroying peer manager");
     this.isDestroyed = true;
+    this.isInitialized = false;
+    this.initPromise = null;
+    
+    // Cancel any pending reconnect
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
     this.connections.forEach((conn) => conn.close());
     this.connections.clear();
-    this.peer?.destroy();
+    
+    if (this.peer && !this.peer.destroyed) {
+      this.peer.destroy();
+    }
     this.peer = null;
   }
 }
@@ -226,9 +417,15 @@ export class PlayerPeerManager {
   private callbacks: PeerSyncCallbacks;
   private lobbyCode: string;
   private playerId: string;
-  private isDestroyed: boolean = false;
+  public isDestroyed: boolean = false;
+  private isInitialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private reconnectBackoff: number = 1000;
+  private lastReconnectAttempt: number = 0;
+  private isConnectingToHost: boolean = false;
 
   constructor(lobbyCode: string, playerId: string, callbacks: PeerSyncCallbacks) {
     this.lobbyCode = lobbyCode;
@@ -236,10 +433,38 @@ export class PlayerPeerManager {
     this.callbacks = callbacks;
   }
 
+  // Update callbacks (used when reusing singleton)
+  updateCallbacks(callbacks: PeerSyncCallbacks) {
+    this.callbacks = callbacks;
+    // Notify new callback of current status
+    if (this.hostConnection?.open) {
+      this.callbacks.onConnectionStatus?.("connected");
+    } else if (this.isInitialized) {
+      this.callbacks.onConnectionStatus?.("connecting");
+    }
+  }
+
   async initialize(): Promise<void> {
+    // Return existing promise if already initializing
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    
+    // Already initialized with open connection
+    if (this.isInitialized && this.peer?.open) {
+      // If we have a host connection, we're good
+      if (this.hostConnection?.open) {
+        this.callbacks.onConnectionStatus?.("connected");
+      } else {
+        // Peer is open but no host connection, try to connect
+        this.connectToHost();
+      }
+      return Promise.resolve();
+    }
+    
     if (this.isDestroyed) return;
     
-    return new Promise((resolve, reject) => {
+    this.initPromise = new Promise((resolve, reject) => {
       const peerId = getPlayerPeerId(this.lobbyCode, this.playerId);
       
       this.peer = new Peer(peerId, {
@@ -248,6 +473,8 @@ export class PlayerPeerManager {
 
       this.peer.on("open", (id) => {
         console.log("[PeerSync Player] Connected with ID:", id);
+        this.isInitialized = true;
+        this.reconnectBackoff = 1000; // Reset backoff
         this.connectToHost();
         resolve();
       });
@@ -255,17 +482,21 @@ export class PlayerPeerManager {
       this.peer.on("error", (err) => {
         console.error("[PeerSync Player] Error:", err);
         if (err.type === "unavailable-id") {
-          // Try with random suffix
+          // Wait and retry with same ID (let old connection time out)
+          console.log("[PeerSync Player] ID unavailable, will retry after backoff");
           this.peer?.destroy();
-          this.peer = new Peer(`${peerId}-${Date.now()}`, { debug: 0 });
-          this.peer.on("open", () => {
-            this.connectToHost();
-            resolve();
+          this.peer = null;
+          
+          this.scheduleReconnect(() => {
+            if (!this.isDestroyed) {
+              this.initPromise = null;
+              this.initialize().then(resolve).catch(reject);
+            }
           });
         } else if (err.type === "peer-unavailable") {
-          // Host not available yet, will retry
+          // Host not available yet, will retry connecting to host
           this.callbacks.onConnectionStatus?.("connecting");
-          this.scheduleReconnect();
+          this.scheduleHostReconnect();
         } else {
           this.callbacks.onError?.(err);
           this.callbacks.onConnectionStatus?.("error");
@@ -275,16 +506,29 @@ export class PlayerPeerManager {
       this.peer.on("disconnected", () => {
         console.log("[PeerSync Player] Disconnected from server");
         this.callbacks.onConnectionStatus?.("disconnected");
-        if (!this.isDestroyed) {
-          this.peer?.reconnect();
+        if (!this.isDestroyed && this.peer && !this.peer.destroyed) {
+          this.scheduleReconnect(() => {
+            if (!this.isDestroyed && this.peer && !this.peer.destroyed) {
+              this.peer.reconnect();
+            }
+          });
         }
       });
     });
+    
+    return this.initPromise;
   }
 
   private connectToHost() {
-    if (this.isDestroyed || !this.peer) return;
+    if (this.isDestroyed || !this.peer || this.isConnectingToHost) return;
     
+    // If already connected, don't reconnect
+    if (this.hostConnection?.open) {
+      console.log("[PeerSync Player] Already connected to host");
+      return;
+    }
+    
+    this.isConnectingToHost = true;
     const hostPeerId = getHostPeerId(this.lobbyCode);
     console.log("[PeerSync Player] Connecting to host:", hostPeerId);
     this.callbacks.onConnectionStatus?.("connecting");
@@ -297,6 +541,8 @@ export class PlayerPeerManager {
       console.log("[PeerSync Player] Connected to host!");
       this.hostConnection = conn;
       this.reconnectAttempts = 0;
+      this.reconnectBackoff = 1000;
+      this.isConnectingToHost = false;
       this.callbacks.onConnectionStatus?.("connected");
       
       // Request current state
@@ -311,33 +557,56 @@ export class PlayerPeerManager {
     conn.on("close", () => {
       console.log("[PeerSync Player] Connection to host closed");
       this.hostConnection = null;
+      this.isConnectingToHost = false;
       this.callbacks.onConnectionStatus?.("disconnected");
       if (!this.isDestroyed) {
-        this.scheduleReconnect();
+        this.scheduleHostReconnect();
       }
     });
 
     conn.on("error", (err) => {
       console.error("[PeerSync Player] Connection error:", err);
       this.hostConnection = null;
-      this.scheduleReconnect();
+      this.isConnectingToHost = false;
+      this.scheduleHostReconnect();
     });
   }
 
-  private scheduleReconnect() {
+  private scheduleReconnect(action: () => void) {
+    // Cancel any pending reconnect
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+    }
+    
+    // Rate limit
+    const now = Date.now();
+    const timeSinceLastAttempt = now - this.lastReconnectAttempt;
+    const delay = Math.max(this.reconnectBackoff, this.reconnectBackoff - timeSinceLastAttempt);
+    
+    console.log(`[PeerSync Player] Scheduling reconnect in ${delay}ms`);
+    
+    this.reconnectTimeout = setTimeout(() => {
+      this.lastReconnectAttempt = Date.now();
+      this.reconnectBackoff = Math.min(this.reconnectBackoff * 1.5, 30000);
+      action();
+    }, delay);
+  }
+
+  private scheduleHostReconnect() {
     if (this.isDestroyed || this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.log("[PeerSync Player] Max reconnect attempts reached");
       return;
     }
     
     this.reconnectAttempts++;
-    const delay = Math.min(1000 * this.reconnectAttempts, 5000);
-    console.log(`[PeerSync Player] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    const delay = Math.min(1000 * Math.pow(1.5, this.reconnectAttempts - 1), 10000);
+    console.log(`[PeerSync Player] Reconnecting to host in ${delay}ms (attempt ${this.reconnectAttempts})`);
     
-    setTimeout(() => {
-      if (!this.isDestroyed) {
+    this.scheduleReconnect(() => {
+      if (!this.isDestroyed && this.peer?.open) {
         this.connectToHost();
       }
-    }, delay);
+    });
   }
 
   private handleMessage(message: PeerMessage) {
@@ -370,10 +639,26 @@ export class PlayerPeerManager {
   }
 
   destroy() {
+    console.log("[PeerSync Player] Destroying peer manager");
     this.isDestroyed = true;
-    this.hostConnection?.close();
-    this.hostConnection = null;
-    this.peer?.destroy();
+    this.isInitialized = false;
+    this.initPromise = null;
+    this.isConnectingToHost = false;
+    
+    // Cancel any pending reconnect
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    
+    if (this.hostConnection) {
+      this.hostConnection.close();
+      this.hostConnection = null;
+    }
+    
+    if (this.peer && !this.peer.destroyed) {
+      this.peer.destroy();
+    }
     this.peer = null;
   }
 }

@@ -5,7 +5,11 @@ import { GameState, Lobby } from "@/types/game";
 import { 
   HostPeerManager, 
   PlayerPeerManager, 
-  PeerSyncCallbacks 
+  PeerSyncCallbacks,
+  getOrCreateHostPeer,
+  releaseHostPeer,
+  getOrCreatePlayerPeer,
+  releasePlayerPeer,
 } from "@/lib/peer-sync";
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
@@ -36,9 +40,14 @@ export function useHostPeerSync({
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [connectedPlayers, setConnectedPlayers] = useState(0);
   const [peerId, setPeerId] = useState<string | undefined>();
+  const onBuzzRef = useRef(onBuzz);
   const onPlayerConnectedRef = useRef(onPlayerConnectedCallback);
 
-  // Keep callback ref updated
+  // Keep callback refs updated
+  useEffect(() => {
+    onBuzzRef.current = onBuzz;
+  }, [onBuzz]);
+  
   useEffect(() => {
     onPlayerConnectedRef.current = onPlayerConnectedCallback;
   }, [onPlayerConnectedCallback]);
@@ -48,7 +57,7 @@ export function useHostPeerSync({
 
     const callbacks: PeerSyncCallbacks = {
       onConnectionStatus: setStatus,
-      onBuzz: onBuzz,
+      onBuzz: (playerId, playerName) => onBuzzRef.current?.(playerId, playerName),
       onPlayerConnected: () => {
         setConnectedPlayers(managerRef.current?.getConnectedCount() ?? 0);
         onPlayerConnectedRef.current?.();
@@ -59,7 +68,8 @@ export function useHostPeerSync({
       onError: (err) => console.error("[useHostPeerSync] Error:", err),
     };
 
-    const manager = new HostPeerManager(lobbyCode, callbacks);
+    // Use singleton pattern - get or create peer
+    const manager = getOrCreateHostPeer(lobbyCode, callbacks);
     managerRef.current = manager;
 
     manager.initialize().then(() => {
@@ -69,18 +79,11 @@ export function useHostPeerSync({
     });
 
     return () => {
-      manager.destroy();
+      // Release instead of destroy - allows reuse during navigation
+      releaseHostPeer(lobbyCode);
       managerRef.current = null;
     };
   }, [lobbyCode, enabled]);
-
-  // Update onBuzz callback ref
-  useEffect(() => {
-    if (managerRef.current && onBuzz) {
-      // The manager stores callbacks, so we need to update them
-      // For now, the callback is set on initialization
-    }
-  }, [onBuzz]);
 
   const broadcastState = useCallback((gameState: GameState, version: number) => {
     managerRef.current?.broadcastState(gameState, version);
@@ -136,7 +139,8 @@ export function usePlayerPeerSync({
       onError: (err) => console.error("[usePlayerPeerSync] Error:", err),
     };
 
-    const manager = new PlayerPeerManager(lobbyCode, playerId, callbacks);
+    // Use singleton pattern - get or create peer
+    const manager = getOrCreatePlayerPeer(lobbyCode, playerId, callbacks);
     managerRef.current = manager;
 
     manager.initialize().catch((err) => {
@@ -144,7 +148,8 @@ export function usePlayerPeerSync({
     });
 
     return () => {
-      manager.destroy();
+      // Release instead of destroy - allows reuse during navigation
+      releasePlayerPeer(lobbyCode, playerId);
       managerRef.current = null;
     };
   }, [lobbyCode, playerId, enabled]);
