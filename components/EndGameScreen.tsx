@@ -166,27 +166,13 @@ export function EndGameScreen({
     const mostCorrect = [...playerStats].sort((a, b) => b.correctAnswers - a.correctAnswers)[0];
     if (mostCorrect && mostCorrect.correctAnswers > 0) {
       awards.push({
-        title: "Trivia Master",
+        title: "Most Correct Answers",
         icon: <Target className="h-6 w-6" />,
         playerId: mostCorrect.playerId,
         playerName: mostCorrect.playerName,
         value: `${mostCorrect.correctAnswers}`,
-        description: "Most correct answers",
+        description: "Questions answered correctly",
         color: "text-green-400"
-      });
-    }
-
-    // Quickest Draw (Most First Buzzes)
-    const quickestDraw = [...playerStats].sort((a, b) => b.firstBuzzes - a.firstBuzzes)[0];
-    if (quickestDraw && quickestDraw.firstBuzzes > 0) {
-      awards.push({
-        title: "Quickest Draw",
-        icon: <Zap className="h-6 w-6" />,
-        playerId: quickestDraw.playerId,
-        playerName: quickestDraw.playerName,
-        value: `${quickestDraw.firstBuzzes}x`,
-        description: "First to buzz",
-        color: "text-yellow-400"
       });
     }
 
@@ -194,40 +180,40 @@ export function EndGameScreen({
     const mostWrong = [...playerStats].sort((a, b) => b.wrongAnswers - a.wrongAnswers)[0];
     if (mostWrong && mostWrong.wrongAnswers > 0) {
       awards.push({
-        title: "Risk Taker",
+        title: "Most Wrong Answers",
         icon: <XCircle className="h-6 w-6" />,
         playerId: mostWrong.playerId,
         playerName: mostWrong.playerName,
         value: `${mostWrong.wrongAnswers}`,
-        description: "Most wrong answers",
+        description: "Incorrect answers given",
         color: "text-red-400"
       });
     }
 
-    // Highest Value Correct
-    const bigWinner = [...playerStats].sort((a, b) => b.highestValueCorrect - a.highestValueCorrect)[0];
-    if (bigWinner && bigWinner.highestValueCorrect > 0) {
+    // Most First Buzzes
+    const quickestDraw = [...playerStats].sort((a, b) => b.firstBuzzes - a.firstBuzzes)[0];
+    if (quickestDraw && quickestDraw.firstBuzzes > 0) {
       awards.push({
-        title: "High Roller",
-        icon: <TrendingUp className="h-6 w-6" />,
-        playerId: bigWinner.playerId,
-        playerName: bigWinner.playerName,
-        value: `$${bigWinner.highestValueCorrect}`,
-        description: "Highest value correct",
-        color: "text-purple-400"
+        title: "Fastest Buzzer",
+        icon: <Zap className="h-6 w-6" />,
+        playerId: quickestDraw.playerId,
+        playerName: quickestDraw.playerName,
+        value: `${quickestDraw.firstBuzzes}x`,
+        description: "Times first to buzz",
+        color: "text-yellow-400"
       });
     }
 
-    // Most Buzzes (Most Active)
+    // Most Buzzes Total
     const mostActive = [...playerStats].sort((a, b) => b.totalBuzzes - a.totalBuzzes)[0];
     if (mostActive && mostActive.totalBuzzes > 0) {
       awards.push({
-        title: "Eager Beaver",
+        title: "Most Buzzes Total",
         icon: <Timer className="h-6 w-6" />,
         playerId: mostActive.playerId,
         playerName: mostActive.playerName,
         value: `${mostActive.totalBuzzes}x`,
-        description: "Most buzzes total",
+        description: "Total times buzzed in",
         color: "text-blue-400"
       });
     }
@@ -241,27 +227,62 @@ export function EndGameScreen({
       const accuracy = Math.round((bestAccuracy.correctAnswers / bestAccuracy.totalBuzzes) * 100);
       if (accuracy > 0) {
         awards.push({
-          title: "Sharpshooter",
+          title: "Best Accuracy",
           icon: <Award className="h-6 w-6" />,
           playerId: bestAccuracy.playerId,
           playerName: bestAccuracy.playerName,
           value: `${accuracy}%`,
-          description: "Best accuracy",
+          description: "Correct answers / total buzzes",
           color: "text-cyan-400"
         });
       }
     }
 
-    // Most Points Gained
+    // Worst Accuracy (min 3 buzzes)
+    if (accuracyPlayers.length > 1) {
+      const worstAccuracy = [...accuracyPlayers].sort((a, b) => 
+        (a.correctAnswers / a.totalBuzzes) - (b.correctAnswers / b.totalBuzzes)
+      )[0];
+      const accuracy = Math.round((worstAccuracy.correctAnswers / worstAccuracy.totalBuzzes) * 100);
+      if (accuracy < 100 && worstAccuracy.playerId !== accuracyPlayers.sort((a, b) => 
+        (b.correctAnswers / b.totalBuzzes) - (a.correctAnswers / a.totalBuzzes)
+      )[0].playerId) {
+        awards.push({
+          title: "Worst Accuracy",
+          icon: <XCircle className="h-6 w-6" />,
+          playerId: worstAccuracy.playerId,
+          playerName: worstAccuracy.playerName,
+          value: `${accuracy}%`,
+          description: "Correct answers / total buzzes",
+          color: "text-orange-400"
+        });
+      }
+    }
+
+    // Highest Value Correct
+    const bigWinner = [...playerStats].sort((a, b) => b.highestValueCorrect - a.highestValueCorrect)[0];
+    if (bigWinner && bigWinner.highestValueCorrect > 0) {
+      awards.push({
+        title: "Highest Value Correct",
+        icon: <TrendingUp className="h-6 w-6" />,
+        playerId: bigWinner.playerId,
+        playerName: bigWinner.playerName,
+        value: `$${bigWinner.highestValueCorrect}`,
+        description: "Biggest single question win",
+        color: "text-purple-400"
+      });
+    }
+
+    // Most Points Earned
     const biggestGainer = [...playerStats].sort((a, b) => b.pointsGained - a.pointsGained)[0];
     if (biggestGainer && biggestGainer.pointsGained > 0) {
       awards.push({
-        title: "Point Machine",
+        title: "Most Points Earned",
         icon: <TrendingUp className="h-6 w-6" />,
         playerId: biggestGainer.playerId,
         playerName: biggestGainer.playerName,
         value: `+$${biggestGainer.pointsGained}`,
-        description: "Total points earned",
+        description: "Total from correct answers",
         color: "text-emerald-400"
       });
     }
@@ -270,14 +291,93 @@ export function EndGameScreen({
     const biggestLoser = [...playerStats].sort((a, b) => b.pointsLost - a.pointsLost)[0];
     if (biggestLoser && biggestLoser.pointsLost > 0) {
       awards.push({
-        title: "Gambler",
+        title: "Most Points Lost",
         icon: <XCircle className="h-6 w-6" />,
         playerId: biggestLoser.playerId,
         playerName: biggestLoser.playerName,
         value: `-$${biggestLoser.pointsLost}`,
-        description: "Total points lost",
-        color: "text-orange-400"
+        description: "Total from wrong answers",
+        color: "text-red-400"
       });
+    }
+
+    // Best Net Points (gained - lost)
+    const netPoints = playerStats.map(p => ({
+      ...p,
+      netPoints: p.pointsGained - p.pointsLost
+    }));
+    const bestNet = [...netPoints].sort((a, b) => b.netPoints - a.netPoints)[0];
+    if (bestNet && bestNet.netPoints !== 0 && bestNet.totalBuzzes > 0) {
+      awards.push({
+        title: "Best Net Points",
+        icon: <TrendingUp className="h-6 w-6" />,
+        playerId: bestNet.playerId,
+        playerName: bestNet.playerName,
+        value: `${bestNet.netPoints >= 0 ? '+' : ''}$${bestNet.netPoints}`,
+        description: "Points earned minus lost",
+        color: bestNet.netPoints >= 0 ? "text-green-400" : "text-red-400"
+      });
+    }
+
+    // Worst Net Points
+    const worstNet = [...netPoints].sort((a, b) => a.netPoints - b.netPoints)[0];
+    if (worstNet && worstNet.netPoints < 0 && worstNet.playerId !== bestNet.playerId) {
+      awards.push({
+        title: "Worst Net Points",
+        icon: <XCircle className="h-6 w-6" />,
+        playerId: worstNet.playerId,
+        playerName: worstNet.playerName,
+        value: `$${worstNet.netPoints}`,
+        description: "Points earned minus lost",
+        color: "text-red-400"
+      });
+    }
+
+    // Best Average Buzz Position (lower is better, min 3 buzzes)
+    const positionPlayers = playerStats.filter(p => p.averageBuzzPosition > 0 && p.totalBuzzes >= 3);
+    if (positionPlayers.length > 0) {
+      const bestPosition = [...positionPlayers].sort((a, b) => a.averageBuzzPosition - b.averageBuzzPosition)[0];
+      awards.push({
+        title: "Best Avg Buzz Position",
+        icon: <Zap className="h-6 w-6" />,
+        playerId: bestPosition.playerId,
+        playerName: bestPosition.playerName,
+        value: `#${bestPosition.averageBuzzPosition.toFixed(1)}`,
+        description: "Average queue position",
+        color: "text-yellow-400"
+      });
+    }
+
+    // Never Wrong (100% accuracy with at least 2 correct)
+    const perfectPlayers = playerStats.filter(p => p.correctAnswers >= 2 && p.wrongAnswers === 0);
+    if (perfectPlayers.length > 0) {
+      const mostPerfect = [...perfectPlayers].sort((a, b) => b.correctAnswers - a.correctAnswers)[0];
+      awards.push({
+        title: "Perfect Record",
+        icon: <Award className="h-6 w-6" />,
+        playerId: mostPerfect.playerId,
+        playerName: mostPerfect.playerName,
+        value: `${mostPerfect.correctAnswers}/${mostPerfect.correctAnswers}`,
+        description: "No wrong answers",
+        color: "text-emerald-400"
+      });
+    }
+
+    // Most Cautious (fewest buzzes but still participated)
+    const activePlayers = playerStats.filter(p => p.totalBuzzes > 0);
+    if (activePlayers.length > 2) {
+      const mostCautious = [...activePlayers].sort((a, b) => a.totalBuzzes - b.totalBuzzes)[0];
+      if (mostCautious.totalBuzzes < mostActive.totalBuzzes) {
+        awards.push({
+          title: "Most Cautious",
+          icon: <Timer className="h-6 w-6" />,
+          playerId: mostCautious.playerId,
+          playerName: mostCautious.playerName,
+          value: `${mostCautious.totalBuzzes}x`,
+          description: "Fewest buzzes",
+          color: "text-gray-400"
+        });
+      }
     }
 
     return awards;
