@@ -624,7 +624,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
       {/* Full-Screen Current Question Modal - uses synchronized visibility */}
       <Dialog open={questionVisible && !!gameState?.currentQuestion} onOpenChange={() => {}}>
-        <DialogContent className="max-w-6xl w-full h-[80vh] border-4 border-blue-400/50 flex flex-col p-6 relative overflow-hidden">
+        <DialogContent className="max-w-6xl w-full min-w-[600px] h-[80vh] border-4 border-blue-400/50 flex flex-col p-6 relative overflow-hidden">
           {/* Buzzer Button - Bottom Left */}
           <div className="absolute bottom-8 left-8 z-10">
             <button
