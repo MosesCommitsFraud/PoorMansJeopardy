@@ -93,12 +93,19 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     status: hostPeerStatus, 
     connectedPlayers,
     broadcastLobby,
+    broadcastLobbyClosed,
     isConnected: isHostPeerConnected 
   } = useHostPeerSync({
     lobbyCode: resolvedParams.code,
     enabled: isHost,
     onPlayerConnected: handlePlayerConnected,
   });
+
+  // Handle lobby closed by host (for players)
+  const handleLobbyClosed = useCallback(() => {
+    setAlertMessage("The lobby has been closed by the host.");
+    setShowAlert(true);
+  }, []);
 
   // PeerJS for player - receives lobby updates
   const { 
@@ -108,6 +115,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     lobbyCode: resolvedParams.code,
     playerId: playerId,
     enabled: !isHost && !!playerId,
+    onLobbyClosed: handleLobbyClosed,
     onLobbyUpdate: handlePeerLobbyUpdate,
   });
 
@@ -293,6 +301,13 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
       const playerId = localStorage.getItem("jeopardy_player_id");
       
       try {
+        // If host is leaving, broadcast lobby closed to all players via P2P
+        if (isHost) {
+          broadcastLobbyClosed();
+          // Small delay to ensure message is sent
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
         await fetch(`/api/lobby/${resolvedParams.code}/leave`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

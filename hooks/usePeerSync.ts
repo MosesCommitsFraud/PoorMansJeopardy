@@ -27,6 +27,7 @@ interface UsePlayerPeerSyncOptions {
   enabled?: boolean;
   onStateUpdate?: (gameState: GameState, version: number) => void;
   onLobbyUpdate?: (lobby: Lobby, version: number) => void;
+  onLobbyClosed?: () => void;
 }
 
 // Hook for host - manages connections from all players
@@ -93,12 +94,17 @@ export function useHostPeerSync({
     managerRef.current?.broadcastLobby(lobby, version);
   }, []);
 
+  const broadcastLobbyClosed = useCallback(() => {
+    managerRef.current?.broadcastLobbyClosed();
+  }, []);
+
   return {
     status,
     connectedPlayers,
     peerId,
     broadcastState,
     broadcastLobby,
+    broadcastLobbyClosed,
     isConnected: status === "connected",
   };
 }
@@ -110,11 +116,13 @@ export function usePlayerPeerSync({
   enabled = true,
   onStateUpdate,
   onLobbyUpdate,
+  onLobbyClosed,
 }: UsePlayerPeerSyncOptions) {
   const managerRef = useRef<PlayerPeerManager | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const onStateUpdateRef = useRef(onStateUpdate);
   const onLobbyUpdateRef = useRef(onLobbyUpdate);
+  const onLobbyClosedRef = useRef(onLobbyClosed);
 
   // Keep callback refs updated
   useEffect(() => {
@@ -126,6 +134,10 @@ export function usePlayerPeerSync({
   }, [onLobbyUpdate]);
 
   useEffect(() => {
+    onLobbyClosedRef.current = onLobbyClosed;
+  }, [onLobbyClosed]);
+
+  useEffect(() => {
     if (!enabled || !lobbyCode || !playerId) return;
 
     const callbacks: PeerSyncCallbacks = {
@@ -135,6 +147,9 @@ export function usePlayerPeerSync({
       },
       onLobbyUpdate: (lobby, version) => {
         onLobbyUpdateRef.current?.(lobby, version);
+      },
+      onLobbyClosed: () => {
+        onLobbyClosedRef.current?.();
       },
       onError: (err) => console.error("[usePlayerPeerSync] Error:", err),
     };

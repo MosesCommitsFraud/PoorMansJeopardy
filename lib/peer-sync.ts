@@ -12,7 +12,8 @@ export type PeerMessage =
   | { type: "ping" }
   | { type: "pong" }
   | { type: "request-state" }
-  | { type: "request-lobby" };
+  | { type: "request-lobby" }
+  | { type: "lobby-closed" };
 
 export interface PeerSyncCallbacks {
   onStateUpdate?: (gameState: GameState, version: number) => void;
@@ -21,6 +22,7 @@ export interface PeerSyncCallbacks {
   onPlayerConnected?: (peerId: string) => void;
   onPlayerDisconnected?: (peerId: string) => void;
   onConnectionStatus?: (status: "connecting" | "connected" | "disconnected" | "error") => void;
+  onLobbyClosed?: () => void;
   onError?: (error: Error) => void;
 }
 
@@ -380,6 +382,15 @@ export class HostPeerManager {
     });
   }
 
+  // Broadcast lobby closed to all connected players
+  broadcastLobbyClosed() {
+    console.log("[PeerSync Host] Broadcasting lobby closed to all players");
+    const message: PeerMessage = { type: "lobby-closed" };
+    this.connections.forEach((conn) => {
+      this.sendTo(conn, message);
+    });
+  }
+
   getConnectedCount(): number {
     return this.connections.size;
   }
@@ -616,6 +627,10 @@ export class PlayerPeerManager {
         break;
       case "lobby":
         this.callbacks.onLobbyUpdate?.(message.lobby, message.version);
+        break;
+      case "lobby-closed":
+        console.log("[PeerSync Player] Received lobby-closed message");
+        this.callbacks.onLobbyClosed?.();
         break;
       case "pong":
         // Connection is alive

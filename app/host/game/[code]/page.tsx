@@ -95,6 +95,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     status: peerStatus, 
     connectedPlayers, 
     broadcastState,
+    broadcastLobbyClosed,
     isConnected: isPeerConnected 
   } = useHostPeerSync({
     lobbyCode: resolvedParams.code,
@@ -546,6 +547,12 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
   const confirmCloseLobby = async () => {
     try {
+      // Broadcast lobby closed to all players via P2P before deleting
+      broadcastLobbyClosed();
+      
+      // Small delay to ensure message is sent
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const hostId = localStorage.getItem("jeopardy_host_id");
       await fetch(`/api/lobby/${resolvedParams.code}/leave`, {
         method: "POST",

@@ -85,6 +85,12 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     checkBuzzerStatus(newGameState);
   }, [router, resolvedParams.code]);
 
+  // Handle lobby closed by host
+  const handleLobbyClosed = useCallback(() => {
+    setAlertMessage("The lobby has been closed by the host.");
+    setShowAlert(true);
+  }, []);
+
   // PeerJS player - connects to host for real-time updates
   const { 
     status: peerStatus, 
@@ -95,6 +101,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     playerId: playerId,
     enabled: !!playerId,
     onStateUpdate: handlePeerStateUpdate,
+    onLobbyClosed: handleLobbyClosed,
   });
 
   // Polling is now just a backup - P2P handles real-time sync
