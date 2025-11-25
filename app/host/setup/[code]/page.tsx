@@ -113,6 +113,21 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     }));
   };
 
+  // Check if a category has no content (all questions and answers are empty)
+  const isCategoryEmpty = (category: Category): boolean => {
+    return category.questions.every(q => 
+      !q.question.trim() && 
+      !q.answer.trim() && 
+      !q.questionImageUrl && 
+      !q.answerImageUrl
+    );
+  };
+
+  // Check if all categories are empty (for determining if we should replace or append)
+  const areAllCategoriesEmpty = (): boolean => {
+    return categories.every(cat => isCategoryEmpty(cat));
+  };
+
   const validateCategories = (): { isValid: boolean; message: string } => {
     if (categories.length === 0) {
       return { isValid: false, message: "Please add at least one category" };
@@ -165,9 +180,14 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       const shuffled = availableCategories.sort(() => Math.random() - 0.5);
       const selectedCategories = shuffled.slice(0, 5);
       
-      // Generate categories using the existing function and add to existing
+      // Generate categories using the existing function
       const generatedCategories = await generateCategoriesFromDataset(selectedCategories);
-      setCategories(prev => [...prev, ...generatedCategories]);
+      // Replace empty categories, otherwise append
+      if (areAllCategoriesEmpty()) {
+        setCategories(generatedCategories);
+      } else {
+        setCategories(prev => [...prev, ...generatedCategories]);
+      }
     } catch (error) {
       console.error('Error loading default game from dataset:', error);
       alert('Failed to load default game. Please try again.');
@@ -234,7 +254,13 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     const template = templateStorage.getById(templateId);
     if (template) {
       // Deep clone to avoid reference issues
-      setCategories(JSON.parse(JSON.stringify(template.categories)));
+      const templateCategories = JSON.parse(JSON.stringify(template.categories));
+      // Replace empty categories, otherwise append
+      if (areAllCategoriesEmpty()) {
+        setCategories(templateCategories);
+      } else {
+        setCategories(prev => [...prev, ...templateCategories]);
+      }
     }
   };
 
@@ -255,7 +281,12 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     setIsGenerating(true);
     try {
       const generatedCategories = await generateCategoriesFromDataset(selectedCategories);
-      setCategories(prev => [...prev, ...generatedCategories]);
+      // Replace empty categories, otherwise append
+      if (areAllCategoriesEmpty()) {
+        setCategories(generatedCategories);
+      } else {
+        setCategories(prev => [...prev, ...generatedCategories]);
+      }
     } catch (error) {
       console.error('Error generating categories from dataset:', error);
       alert('Failed to generate categories from dataset');
