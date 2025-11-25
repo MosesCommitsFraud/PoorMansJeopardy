@@ -4,6 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
+[![PeerJS](https://img.shields.io/badge/PeerJS-WebRTC-orange?style=for-the-badge&logo=webrtc)](https://peerjs.com/)
 [![Issues](https://img.shields.io/github/issues/MosesCommitsFraud/PoorMansJeopardy?style=for-the-badge)](https://github.com/MosesCommitsFraud/PoorMansJeopardy/issues)
 [![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen?style=for-the-badge)](https://github.com/MosesCommitsFraud/PoorMansJeopardy/pulls)
 
@@ -19,10 +20,11 @@ A web-based multiplayer Jeopardy game with host and player views, real-time game
 - **Lobby System**: 4-character room codes with optional password protection
 - **Host Controls**: Full game management including question selection, buzzer control, and score adjustments
 - **Player View**: Clean interface with buzzer button and live game board updates
-- **Real-time Updates**: Efficient polling system for synchronized game state
+- **Real-time P2P Sync**: Instant updates via WebRTC peer-to-peer connections powered by [PeerJS](https://peerjs.com/)
 - **Score Tracking**: Automatic score calculation with manual adjustment options
-- **Timer System**: Configurable countdown timer with visual indicators
+- **Timer System**: Configurable countdown timer with synchronized display across all clients
 - **Win Tracking**: Persistent win counts across multiple games in the same lobby
+- **Instant Buzzer**: Sub-50ms buzzer response times via direct P2P communication
 
 ### Content Management
 - **Custom Questions**: Create and edit your own trivia questions
@@ -47,9 +49,22 @@ A web-based multiplayer Jeopardy game with host and player views, real-time game
 - **Framework**: Next.js 16 with React 19
 - **Language**: TypeScript 5.7
 - **Styling**: Tailwind CSS v4
+- **Real-time**: [PeerJS](https://peerjs.com/) for WebRTC peer-to-peer communication
 - **Database**: Upstash Redis (via Vercel integration) - **Required for production**
 - **APIs**: Tenor GIF API (optional)
 - **Graphics**: Three.js for background effects
+
+### Real-time Architecture
+
+The game uses a hybrid approach for real-time synchronization:
+
+1. **Primary: PeerJS (WebRTC)** - The host acts as a central peer. Players connect directly to the host via WebRTC for instant state updates (~50ms latency). This handles:
+   - Buzzer events (critical for fair play)
+   - Game state broadcasts
+   - Question/answer reveals with synchronized timestamps
+   - Lobby close notifications
+
+2. **Fallback: HTTP Polling** - When P2P connections fail or during initial setup, the game falls back to efficient HTTP polling with version-based change detection.
 
 **Note:** Local development uses in-memory storage. Production deployments **require** Upstash Redis integration to persist lobby data across serverless function instances.
 
@@ -176,8 +191,11 @@ Without persistent storage (Redis), lobby data stored in one function instance w
 │   ├── gif-picker.tsx
 │   └── EndGameScreen.tsx
 ├── contexts/               # React contexts (settings)
+├── hooks/
+│   └── usePeerSync.ts      # React hooks for P2P communication
 ├── lib/
 │   ├── kv-store.ts         # Storage abstraction
+│   ├── peer-sync.ts        # PeerJS manager (host/player P2P)
 │   ├── questions-loader.ts # Dataset integration
 │   ├── tenor-api.ts        # Tenor API wrapper
 │   └── template-storage.ts # Template management
@@ -229,6 +247,7 @@ This project is provided as-is for educational and personal use. The included Je
 ## Acknowledgments
 
 - Question dataset sourced from historical Jeopardy game data
+- Real-time P2P communication powered by [PeerJS](https://peerjs.com/) - Simple WebRTC wrapper for peer-to-peer connections
 - GIF integration powered by [Tenor API](https://tenor.com/gifapi)
 - UI components inspired by [shadcn/ui](https://ui.shadcn.com/)
 - Background effects using [Three.js](https://threejs.org/)
