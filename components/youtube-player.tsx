@@ -145,11 +145,19 @@ export function YouTubePlayer({
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const playerIdRef = useRef(`youtube-player-${Math.random().toString(36).substring(2, 11)}`);
   const syncStartHandledRef = useRef(false);
+  const lastPlayingStateRef = useRef<boolean | undefined>(undefined);
 
   const videoId = extractVideoId(videoUrl);
   const urlTimestamp = extractTimestamp(videoUrl);
 
-  // Reset sync flag when video changes
+  // Initialize lastPlayingStateRef on mount to prevent auto-play
+  useEffect(() => {
+    if (lastPlayingStateRef.current === undefined) {
+      lastPlayingStateRef.current = playing;
+    }
+  }, []);
+
+  // Reset sync flag and playing state tracking when video changes
   useEffect(() => {
     syncStartHandledRef.current = false;
     setHasStartedPlaying(false);
@@ -332,13 +340,13 @@ export function YouTubePlayer({
       clearTimeout(syncTimeoutRef.current);
     }
 
-    syncStartHandledRef.current = true; // Mark as handled
-
     if (delay > 0) {
+      // Set up timeout for future start
       syncTimeoutRef.current = setTimeout(() => {
         try {
           playerRef.current?.playVideo();
           setHasStartedPlaying(true);
+          syncStartHandledRef.current = true; // Mark as handled after playing
         } catch (error) {
           console.error('Error starting video:', error);
         }
@@ -348,6 +356,7 @@ export function YouTubePlayer({
       try {
         playerRef.current?.playVideo();
         setHasStartedPlaying(true);
+        syncStartHandledRef.current = true; // Mark as handled after playing
       } catch (error) {
         console.error('Error starting video:', error);
       }
@@ -364,11 +373,16 @@ export function YouTubePlayer({
   useEffect(() => {
     if (!playerRef.current || !isReady || playing === undefined) return;
 
-    // For host: always respond to playing prop
+    // Only execute if playing state actually changed (not just a re-render)
+    if (playing === lastPlayingStateRef.current) return;
+
+    // For host: always respond to playing prop changes
     // For players: only respond after synchronized start has been handled
     const shouldRespond = isHost || syncStartHandledRef.current;
 
     if (shouldRespond) {
+      lastPlayingStateRef.current = playing; // Track the state we just processed
+
       try {
         if (playing) {
           playerRef.current.playVideo();

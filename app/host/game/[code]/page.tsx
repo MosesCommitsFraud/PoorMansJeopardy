@@ -400,9 +400,15 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         currentQuestion: null,
         buzzerQueue: [],
         showAnswerToPlayers: false,
-        timerEndAt: null
+        timerEndAt: null,
+        // Reset video state
+        videoPlayAt: undefined,
+        videoPlaying: undefined,
+        videoSeekTo: undefined,
+        videoCommandAt: undefined,
+        videoOptions: undefined
       });
-      
+
       setSelectedQuestion(null);
       setShowAnswer(false);
       setMarkedCorrectIndex(null);
@@ -447,7 +453,13 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       showAnswerToPlayers: false,
       timerEndAt: null,
       questionScoring: updatedQuestionScoring,
-      ...(updatedPlayers ? { players: updatedPlayers } : {})
+      ...(updatedPlayers ? { players: updatedPlayers } : {}),
+      // Reset video state
+      videoPlayAt: undefined,
+      videoPlaying: undefined,
+      videoSeekTo: undefined,
+      videoCommandAt: undefined,
+      videoOptions: undefined
     });
     
     setSelectedQuestion(null);
