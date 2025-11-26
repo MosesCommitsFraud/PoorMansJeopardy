@@ -15,7 +15,7 @@ export type VideoDisplayMode = 'full' | 'audio-only' | 'muted';
 export interface VideoControlOptions {
   showTitle: boolean;
   mode: VideoDisplayMode;
-  volume: number; // 0-100
+  volume?: number; // 0-100 (optional - players control their own volume)
 }
 
 export interface Category {

@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw, Power, Settings2, Volume2, VolumeX } from "lucide-react";
+import { Bell, Trophy, Plus, Minus, AlertCircle, Clock, Play, Pause, RotateCcw, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,7 +50,6 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   // Video control states
   const [videoShowTitle, setVideoShowTitle] = useState(true);
   const [videoMode, setVideoMode] = useState<VideoDisplayMode>('full');
-  const [videoVolume, setVideoVolume] = useState(100);
 
   // Keep refs in sync
   useEffect(() => {
@@ -307,8 +305,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         answerRevealAt: undefined, // Clear any previous answer reveal
         videoOptions: {
           showTitle: videoShowTitle,
-          mode: videoMode,
-          volume: videoVolume
+          mode: videoMode
         }
       });
     }
@@ -330,8 +327,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       videoPlayAt: playAt,
       videoOptions: {
         showTitle: videoShowTitle,
-        mode: videoMode,
-        volume: videoVolume
+        mode: videoMode
       }
     });
   };
@@ -935,7 +931,6 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                       showTitle={videoShowTitle}
                       mode={videoMode}
                       showControls={true}
-                      onVolumeChange={setVideoVolume}
                       className="max-h-60"
                     />
                   </div>
@@ -966,7 +961,6 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                         showTitle={videoShowTitle}
                         mode={videoMode}
                         showControls={true}
-                        onVolumeChange={setVideoVolume}
                         className="max-h-60"
                       />
                     </div>
@@ -1062,30 +1056,6 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                         >
                           Muted
                         </Button>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-300 mb-2">Volume for Players</div>
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => setVideoVolume(videoVolume > 0 ? 0 : 100)}
-                          className="text-white hover:text-gray-300 transition-colors"
-                          type="button"
-                        >
-                          {videoVolume === 0 ? (
-                            <VolumeX className="h-4 w-4" />
-                          ) : (
-                            <Volume2 className="h-4 w-4" />
-                          )}
-                        </button>
-                        <Slider
-                          value={[videoVolume]}
-                          onValueChange={(value) => setVideoVolume(value[0])}
-                          max={100}
-                          step={1}
-                          className="flex-1"
-                        />
-                        <span className="text-xs text-white w-10 text-right">{Math.round(videoVolume)}%</span>
                       </div>
                     </div>
                     <div>

@@ -721,7 +721,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                       volume={gameState.videoOptions?.volume ?? 100}
                       autoplay={false}
                       startAt={gameState.videoPlayAt}
-                      showControls={true}
+                      showControls={gameState.videoOptions?.mode !== 'muted'}
                     />
                   </div>
                 )}
@@ -758,7 +758,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                         volume={gameState.videoOptions?.volume ?? 100}
                         autoplay={false}
                         startAt={gameState.videoPlayAt}
-                        showControls={true}
+                        showControls={gameState.videoOptions?.mode !== 'muted'}
                       />
                     </div>
                   )}
