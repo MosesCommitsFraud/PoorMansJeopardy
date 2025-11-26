@@ -397,8 +397,8 @@ export function YouTubePlayer({
     // Only execute if playing state actually changed (not just a re-render)
     if (playing === lastPlayingStateRef.current) return;
 
-    // For host: always respond to playing prop changes
-    // For players: only respond after synchronized start has been handled OR if there's no startAt
+    // For host: always respond immediately
+    // For players: respond if sync is handled, OR if there's no startAt, OR if commandAt changed (manual command)
     const shouldRespond = isHost || syncStartHandledRef.current || !startAt;
 
     if (shouldRespond) {
@@ -414,6 +414,9 @@ export function YouTubePlayer({
       } catch (error) {
         console.error('Error controlling playback:', error);
       }
+    } else {
+      // For players where sync hasn't completed: still track the state to avoid re-triggering
+      lastPlayingStateRef.current = playing;
     }
   }, [playing, commandAt, isReady, isHost, startAt]);
 
@@ -477,21 +480,21 @@ export function YouTubePlayer({
 
   return (
     <div className={`relative ${className}`}>
-      {mode === 'audio-only' && (
-        <div className="absolute inset-0 bg-black z-10 flex items-center justify-center rounded-lg">
-          <div className="text-white text-center">
-            <svg
-              className="w-16 h-16 mx-auto mb-4 animate-pulse"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
-            </svg>
-            <p className="text-sm">Audio Only Mode</p>
-          </div>
-        </div>
-      )}
       <div className="aspect-video w-full bg-black rounded-lg overflow-hidden relative">
+        {mode === 'audio-only' && (
+          <div className="absolute inset-0 bg-black z-10 flex items-center justify-center">
+            <div className="text-white text-center">
+              <svg
+                className="w-16 h-16 mx-auto mb-4 animate-pulse"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.82l8-1.6v5.894A4.37 4.37 0 0015 12c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
+              </svg>
+              <p className="text-sm">Audio Only Mode</p>
+            </div>
+          </div>
+        )}
         <div
           id={playerIdRef.current}
           ref={playerContainerRef}
@@ -560,8 +563,8 @@ export function YouTubePlayer({
         )}
       </div>
 
-      {/* Volume Control - Show for full and audio-only modes, but not muted mode */}
-      {showControls && (mode === 'full' || mode === 'audio-only') && (
+      {/* Volume Control - Show when controls enabled, except in muted mode */}
+      {showControls && mode !== 'muted' && (
         <div className="mt-3 flex items-center gap-3 px-2">
           <button
             onClick={toggleMute}

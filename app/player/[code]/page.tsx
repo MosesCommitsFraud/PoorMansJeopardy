@@ -720,7 +720,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                       mode={gameState.videoOptions?.mode ?? 'full'}
                       volume={gameState.videoOptions?.volume ?? 100}
                       startAt={gameState.videoPlayAt}
-                      showControls={(gameState.videoOptions?.mode ?? 'full') !== 'muted'}
+                      showControls={true}
                       isHost={false}
                       playing={gameState.videoPlaying}
                       seekTo={gameState.videoSeekTo}
@@ -760,7 +760,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                         mode={gameState.videoOptions?.mode ?? 'full'}
                         volume={gameState.videoOptions?.volume ?? 100}
                         startAt={gameState.videoPlayAt}
-                        showControls={(gameState.videoOptions?.mode ?? 'full') !== 'muted'}
+                        showControls={true}
                         isHost={false}
                         playing={gameState.videoPlaying}
                         seekTo={gameState.videoSeekTo}
