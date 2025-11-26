@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "party:dev": "partykit dev",
+    "party:deploy": "partykit deploy"
   },
   "dependencies": {
     "@heroui/spinner": "^2.2.24",
@@ -24,7 +26,7 @@
     "lucide-react": "^0.469.0",
     "nanoid": "^5.0.9",
     "next": "^16.0.0",
-    "peerjs": "^1.5.5",
+    "partysocket": "^1.1.6",
     "postprocessing": "^6.37.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -39,6 +41,7 @@
     "@types/react-dom": "^19.0.2",
     "eslint": "^9.17.0",
     "eslint-config-next": "^16.0.0",
+    "partykit": "^0.0.115",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2"
   }

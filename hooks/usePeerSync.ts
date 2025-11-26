@@ -31,7 +31,7 @@ interface UsePlayerPeerSyncOptions {
   onPlayerKicked?: (playerId: string) => void;
 }
 
-// Hook for host - manages connections from all players
+// Hook for host - manages connections from all players via PartyKit
 export function useHostPeerSync({ 
   lobbyCode, 
   enabled = true,
@@ -70,7 +70,7 @@ export function useHostPeerSync({
       onError: (err) => console.error("[useHostPeerSync] Error:", err),
     };
 
-    // Use singleton pattern - get or create peer
+    // Use singleton pattern - get or create manager
     const manager = getOrCreateHostPeer(lobbyCode, callbacks);
     managerRef.current = manager;
 
@@ -115,7 +115,7 @@ export function useHostPeerSync({
   };
 }
 
-// Hook for player - connects to host
+// Hook for player - connects to host via PartyKit
 export function usePlayerPeerSync({
   lobbyCode,
   playerId,
@@ -169,7 +169,7 @@ export function usePlayerPeerSync({
       onError: (err) => console.error("[usePlayerPeerSync] Error:", err),
     };
 
-    // Use singleton pattern - get or create peer
+    // Use singleton pattern - get or create manager
     const manager = getOrCreatePlayerPeer(lobbyCode, playerId, callbacks);
     managerRef.current = manager;
 
@@ -194,4 +194,3 @@ export function usePlayerPeerSync({
     isConnected: status === "connected",
   };
 }
-
