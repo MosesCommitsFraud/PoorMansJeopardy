@@ -12,9 +12,13 @@ interface YouTubePlayerProps {
   autoplay?: boolean;
   startAt?: number; // Timestamp to start synchronized playback
   className?: string;
-  showControls?: boolean; // Show volume slider (for host)
+  showControls?: boolean; // Show volume slider (for players)
   onVolumeChange?: (volume: number) => void;
   volume?: number; // Initial volume (0-100)
+  isHost?: boolean; // Whether this is the host (shows full controls)
+  playing?: boolean; // Controlled playback state from host
+  seekTo?: number; // Seek position from host (in seconds)
+  commandAt?: number; // Timestamp of last playback command
 }
 
 // Extract YouTube video ID from various URL formats
@@ -106,12 +110,15 @@ export function YouTubePlayer({
   videoUrl,
   showTitle,
   mode,
-  autoplay = false,
   startAt,
   className = '',
   showControls = false,
   onVolumeChange,
   volume: initialVolume = 100,
+  isHost = false,
+  playing,
+  seekTo,
+  commandAt,
 }: YouTubePlayerProps) {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
@@ -139,14 +146,14 @@ export function YouTubePlayer({
         // Prepare player vars with optional start time
         const playerVars: any = {
           autoplay: 0, // Never autoplay - we control playback via API
-          controls: 1,
+          controls: isHost ? 1 : 0, // Only host gets controls
           modestbranding: 1,
           rel: 0,
           iv_load_policy: 3,
           origin: window.location.origin,
           enablejsapi: 1,
-          fs: 1, // Allow fullscreen
-          disablekb: 0, // Allow keyboard controls
+          fs: isHost ? 1 : 0, // Only host can fullscreen
+          disablekb: isHost ? 0 : 1, // Only host can use keyboard controls
         };
 
         // Add start time if found in URL
@@ -288,6 +295,32 @@ export function YouTubePlayer({
     };
   }, [startAt, isReady]);
 
+  // Handle play/pause commands from host
+  useEffect(() => {
+    if (!playerRef.current || !isReady || isHost) return;
+
+    try {
+      if (playing) {
+        playerRef.current.playVideo();
+      } else if (playing === false) {
+        playerRef.current.pauseVideo();
+      }
+    } catch (error) {
+      console.error('Error controlling playback:', error);
+    }
+  }, [playing, commandAt, isReady, isHost]);
+
+  // Handle seek commands from host
+  useEffect(() => {
+    if (!playerRef.current || !isReady || isHost || seekTo === undefined) return;
+
+    try {
+      playerRef.current.seekTo(seekTo, true);
+    } catch (error) {
+      console.error('Error seeking:', error);
+    }
+  }, [seekTo, commandAt, isReady, isHost]);
+
   // Handle volume changes
   const handleVolumeChange = (value: number[]) => {
     const newVolume = value[0];
@@ -364,6 +397,13 @@ export function YouTubePlayer({
               CENSORED
             </span>
           </div>
+        )}
+        {/* Interaction blocker - prevents players from controlling the video */}
+        {!isHost && (
+          <div className="absolute inset-0 z-20 cursor-not-allowed"
+               style={{ pointerEvents: 'all' }}
+               title="Video playback is controlled by the host"
+          />
         )}
       </div>
 

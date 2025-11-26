@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Trophy, Plus, Minus, AlertCircle, Clock, Play, Pause, RotateCcw, Power } from "lucide-react";
+import { Bell, Trophy, Plus, Minus, AlertCircle, Clock, Play, Pause, RotateCcw, Power, SkipBack } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -329,6 +329,21 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         showTitle: videoShowTitle,
         mode: videoMode
       }
+    });
+  };
+
+  const toggleVideoPlayback = async () => {
+    const isPlaying = gameState?.videoPlaying ?? false;
+    await updateGameState({
+      videoPlaying: !isPlaying,
+      videoCommandAt: Date.now()
+    });
+  };
+
+  const seekVideo = async (seconds: number) => {
+    await updateGameState({
+      videoSeekTo: seconds,
+      videoCommandAt: Date.now()
     });
   };
 
@@ -931,6 +946,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                       showTitle={videoShowTitle}
                       mode={videoMode}
                       showControls={true}
+                      isHost={true}
+                      playing={gameState?.videoPlaying}
+                      seekTo={gameState?.videoSeekTo}
+                      commandAt={gameState?.videoCommandAt}
                       className="max-h-60"
                     />
                   </div>
@@ -961,6 +980,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                         showTitle={videoShowTitle}
                         mode={videoMode}
                         showControls={true}
+                        isHost={true}
+                        playing={gameState?.videoPlaying}
+                        seekTo={gameState?.videoSeekTo}
+                        commandAt={gameState?.videoCommandAt}
                         className="max-h-60"
                       />
                     </div>
@@ -1058,7 +1081,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                         </Button>
                       </div>
                     </div>
-                    <div>
+                    <div className="space-y-2">
                       <Button
                         onClick={startVideo}
                         variant="default"
@@ -1072,6 +1095,49 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                       <p className="text-xs text-gray-400 mt-1 text-center">
                         Synchronized start ensures no one has an advantage
                       </p>
+                      <div className="pt-2 border-t border-gray-600/30">
+                        <div className="text-xs text-gray-300 mb-2">Playback Controls</div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={toggleVideoPlayback}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            {gameState?.videoPlaying ? (
+                              <>
+                                <Pause className="h-3 w-3 mr-1" />
+                                Pause
+                              </>
+                            ) : (
+                              <>
+                                <Play className="h-3 w-3 mr-1" />
+                                Play
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            onClick={() => seekVideo(0)}
+                            variant="outline"
+                            size="sm"
+                            title="Restart from beginning"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              // Rewind 10 seconds
+                              const currentTime = gameState?.videoSeekTo ?? 0;
+                              seekVideo(Math.max(0, currentTime - 10));
+                            }}
+                            variant="outline"
+                            size="sm"
+                            title="Rewind 10 seconds"
+                          >
+                            <SkipBack className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

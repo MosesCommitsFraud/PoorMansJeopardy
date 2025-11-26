@@ -66,6 +66,10 @@ export interface GameState {
   questionScoring?: Record<string, QuestionScoring>;
   // Video control options for current question/answer
   videoOptions?: VideoControlOptions;
+  // Video playback state - controlled by host
+  videoPlaying?: boolean; // Whether video should be playing
+  videoSeekTo?: number; // Time in seconds to seek to (when host rewinds/fast-forwards)
+  videoCommandAt?: number; // Timestamp when playback command was issued (for sync)
 }
 
 export interface Lobby {
