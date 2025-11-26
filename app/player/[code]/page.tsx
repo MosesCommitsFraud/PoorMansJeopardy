@@ -719,9 +719,12 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                       showTitle={gameState.videoOptions?.showTitle ?? true}
                       mode={gameState.videoOptions?.mode ?? 'full'}
                       volume={gameState.videoOptions?.volume ?? 100}
-                      autoplay={false}
                       startAt={gameState.videoPlayAt}
                       showControls={gameState.videoOptions?.mode !== 'muted'}
+                      isHost={false}
+                      playing={gameState.videoPlaying}
+                      seekTo={gameState.videoSeekTo}
+                      commandAt={gameState.videoCommandAt}
                     />
                   </div>
                 )}
@@ -756,9 +759,12 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                         showTitle={gameState.videoOptions?.showTitle ?? true}
                         mode={gameState.videoOptions?.mode ?? 'full'}
                         volume={gameState.videoOptions?.volume ?? 100}
-                        autoplay={false}
                         startAt={gameState.videoPlayAt}
                         showControls={gameState.videoOptions?.mode !== 'muted'}
+                        isHost={false}
+                        playing={gameState.videoPlaying}
+                        seekTo={gameState.videoSeekTo}
+                        commandAt={gameState.videoCommandAt}
                       />
                     </div>
                   )}

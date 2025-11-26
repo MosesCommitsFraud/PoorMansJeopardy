@@ -582,6 +582,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                                 videoUrl={question.questionVideoUrl}
                                 showTitle={true}
                                 mode="full"
+                                isHost={true}
                                 className="max-h-40"
                               />
                               <Button
@@ -659,6 +660,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                                 videoUrl={question.answerVideoUrl}
                                 showTitle={true}
                                 mode="full"
+                                isHost={true}
                                 className="max-h-40"
                               />
                               <Button
