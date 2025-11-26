@@ -147,9 +147,15 @@ export function YouTubePlayer({
   const syncStartHandledRef = useRef(false);
   const lastPlayingStateRef = useRef<boolean | undefined>(undefined);
   const initialSeekDoneRef = useRef(false);
+  const playingRef = useRef(playing);
 
   const videoId = extractVideoId(videoUrl);
   const urlTimestamp = extractTimestamp(videoUrl);
+
+  // Keep playingRef in sync with playing prop
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   // Reset sync flag and playing state tracking when video changes
   useEffect(() => {
@@ -330,22 +336,22 @@ export function YouTubePlayer({
   useEffect(() => {
     if (!playerRef.current || !isReady || !startAt || isHost) return;
 
-    // Only handle synchronized start once
+    // Only handle synchronized start once per video
     if (syncStartHandledRef.current) return;
 
     const now = Date.now();
     const delay = startAt - now;
 
-    // If synchronized start was too long ago, mark as handled and fall back to play/pause effect
-    if (delay < -500) {
+    // If synchronized start was too long ago, mark as handled and use fallback
+    if (delay < -1000) {
       syncStartHandledRef.current = true;
-      // If playing is true, play the video immediately as fallback
-      if (playing) {
+      // Check if video should be playing (using ref to avoid dependency)
+      if (playingRef.current) {
         try {
           playerRef.current.playVideo();
           setHasStartedPlaying(true);
         } catch (error) {
-          console.error('Error starting video (fallback):', error);
+          console.error('Error starting video (late arrival fallback):', error);
         }
       }
       return;
@@ -356,22 +362,22 @@ export function YouTubePlayer({
     }
 
     if (delay > 0) {
-      // Set up timeout for future start
+      // Set up timeout for future synchronized start
       syncTimeoutRef.current = setTimeout(() => {
         try {
           playerRef.current?.playVideo();
           setHasStartedPlaying(true);
-          syncStartHandledRef.current = true; // Mark as handled after playing
+          syncStartHandledRef.current = true;
         } catch (error) {
           console.error('Error starting video:', error);
         }
       }, delay);
     } else {
-      // Play immediately if we're within 500ms of the start time
+      // Play immediately if we're close to the start time
       try {
         playerRef.current?.playVideo();
         setHasStartedPlaying(true);
-        syncStartHandledRef.current = true; // Mark as handled after playing
+        syncStartHandledRef.current = true;
       } catch (error) {
         console.error('Error starting video:', error);
       }
@@ -382,7 +388,7 @@ export function YouTubePlayer({
         clearTimeout(syncTimeoutRef.current);
       }
     };
-  }, [startAt, isReady, isHost, playing]);
+  }, [startAt, isReady, isHost]);
 
   // Handle play/pause commands from host
   useEffect(() => {
