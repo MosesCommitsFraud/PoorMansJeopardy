@@ -138,14 +138,15 @@ export function YouTubePlayer({
 
         // Prepare player vars with optional start time
         const playerVars: any = {
-          autoplay: autoplay ? 1 : 0,
+          autoplay: 0, // Never autoplay - we control playback via API
           controls: 1,
           modestbranding: 1,
           rel: 0,
-          showinfo: showTitle ? 1 : 0,
           iv_load_policy: 3,
           origin: window.location.origin,
           enablejsapi: 1,
+          fs: 1, // Allow fullscreen
+          disablekb: 0, // Allow keyboard controls
         };
 
         // Add start time if found in URL
@@ -175,6 +176,18 @@ export function YouTubePlayer({
               } else {
                 event.target.unMute();
                 setIsMuted(false);
+              }
+
+              // IMPORTANT: Stop the video if it auto-started due to timestamp
+              // YouTube sometimes starts playing even with autoplay: 0 when start parameter is present
+              try {
+                const playerState = event.target.getPlayerState();
+                // 1 = playing, 3 = buffering
+                if (playerState === 1 || playerState === 3) {
+                  event.target.pauseVideo();
+                }
+              } catch (error) {
+                console.error('Error checking/stopping player:', error);
               }
             },
             onError: (event: any) => {
@@ -338,12 +351,18 @@ export function YouTubePlayer({
           </div>
         </div>
       )}
-      <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+      <div className="aspect-video w-full bg-black rounded-lg overflow-hidden relative">
         <div
           id={playerIdRef.current}
           ref={playerContainerRef}
           className="w-full h-full"
         />
+        {/* Title overlay - hides YouTube's title when showTitle is false */}
+        {!showTitle && (
+          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black via-black/80 to-transparent pointer-events-none z-10">
+            <div className="absolute inset-0 bg-black/60" />
+          </div>
+        )}
       </div>
 
       {/* Volume Control */}
