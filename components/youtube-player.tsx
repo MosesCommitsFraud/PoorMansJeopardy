@@ -336,9 +336,18 @@ export function YouTubePlayer({
     const now = Date.now();
     const delay = startAt - now;
 
-    // If synchronized start was too long ago, mark as handled so regular play/pause works
+    // If synchronized start was too long ago, mark as handled and fall back to play/pause effect
     if (delay < -500) {
       syncStartHandledRef.current = true;
+      // If playing is true, play the video immediately as fallback
+      if (playing) {
+        try {
+          playerRef.current.playVideo();
+          setHasStartedPlaying(true);
+        } catch (error) {
+          console.error('Error starting video (fallback):', error);
+        }
+      }
       return;
     }
 
@@ -373,7 +382,7 @@ export function YouTubePlayer({
         clearTimeout(syncTimeoutRef.current);
       }
     };
-  }, [startAt, isReady, isHost]);
+  }, [startAt, isReady, isHost, playing]);
 
   // Handle play/pause commands from host
   useEffect(() => {
