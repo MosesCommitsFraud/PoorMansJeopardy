@@ -146,21 +146,17 @@ export function YouTubePlayer({
   const playerIdRef = useRef(`youtube-player-${Math.random().toString(36).substring(2, 11)}`);
   const syncStartHandledRef = useRef(false);
   const lastPlayingStateRef = useRef<boolean | undefined>(undefined);
+  const initialSeekDoneRef = useRef(false);
 
   const videoId = extractVideoId(videoUrl);
   const urlTimestamp = extractTimestamp(videoUrl);
-
-  // Initialize lastPlayingStateRef on mount to prevent auto-play
-  useEffect(() => {
-    if (lastPlayingStateRef.current === undefined) {
-      lastPlayingStateRef.current = playing;
-    }
-  }, []);
 
   // Reset sync flag and playing state tracking when video changes
   useEffect(() => {
     syncStartHandledRef.current = false;
     setHasStartedPlaying(false);
+    initialSeekDoneRef.current = false;
+    lastPlayingStateRef.current = undefined;
   }, [videoId]);
 
   // Load YouTube API and initialize player
@@ -175,7 +171,7 @@ export function YouTubePlayer({
 
         if (!mounted) return;
 
-        // Prepare player vars with optional start time
+        // Prepare player vars - DO NOT use start parameter to prevent auto-play
         const playerVars: any = {
           autoplay: 0, // Never autoplay - we control playback via API
           controls: isHost ? 1 : 0, // Only host gets controls
@@ -188,10 +184,8 @@ export function YouTubePlayer({
           disablekb: isHost ? 0 : 1, // Only host can use keyboard controls
         };
 
-        // Add start time if found in URL
-        if (urlTimestamp !== null) {
-          playerVars.start = urlTimestamp;
-        }
+        // NOTE: We don't use playerVars.start to avoid auto-play issues
+        // Instead, we'll manually seek to the timestamp after ready
 
         // Create player
         const player = new (window as any).YT.Player(playerIdRef.current, {
@@ -225,11 +219,20 @@ export function YouTubePlayer({
                 setIsMuted(false);
               }
 
-              // IMPORTANT: Stop the video if it auto-started due to timestamp
-              // YouTube sometimes starts playing even with autoplay: 0 when start parameter is present
+              // Seek to URL timestamp if present (instead of using playerVars.start)
+              if (urlTimestamp !== null && !initialSeekDoneRef.current) {
+                try {
+                  event.target.seekTo(urlTimestamp, true);
+                  initialSeekDoneRef.current = true;
+                } catch (error) {
+                  console.error('Error seeking to timestamp:', error);
+                }
+              }
+
+              // IMPORTANT: Ensure the video is paused and ready to be controlled
               try {
                 const playerState = event.target.getPlayerState();
-                // 1 = playing, 3 = buffering
+                // 1 = playing, 3 = buffering - stop any auto-play
                 if (playerState === 1 || playerState === 3) {
                   event.target.pauseVideo();
                 }
@@ -333,8 +336,11 @@ export function YouTubePlayer({
     const now = Date.now();
     const delay = startAt - now;
 
-    // Skip if synchronized start was too long ago (already completed)
-    if (delay < -500) return;
+    // If synchronized start was too long ago, mark as handled so regular play/pause works
+    if (delay < -500) {
+      syncStartHandledRef.current = true;
+      return;
+    }
 
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
@@ -351,8 +357,8 @@ export function YouTubePlayer({
           console.error('Error starting video:', error);
         }
       }, delay);
-    } else if (delay >= -500) {
-      // Only play if we're within 500ms of the start time
+    } else {
+      // Play immediately if we're within 500ms of the start time
       try {
         playerRef.current?.playVideo();
         setHasStartedPlaying(true);
@@ -377,8 +383,8 @@ export function YouTubePlayer({
     if (playing === lastPlayingStateRef.current) return;
 
     // For host: always respond to playing prop changes
-    // For players: only respond after synchronized start has been handled
-    const shouldRespond = isHost || syncStartHandledRef.current;
+    // For players: only respond after synchronized start has been handled OR if there's no startAt
+    const shouldRespond = isHost || syncStartHandledRef.current || !startAt;
 
     if (shouldRespond) {
       lastPlayingStateRef.current = playing; // Track the state we just processed
@@ -394,7 +400,7 @@ export function YouTubePlayer({
         console.error('Error controlling playback:', error);
       }
     }
-  }, [playing, commandAt, isReady, isHost]);
+  }, [playing, commandAt, isReady, isHost, startAt]);
 
   // Handle seek commands from host
   useEffect(() => {
