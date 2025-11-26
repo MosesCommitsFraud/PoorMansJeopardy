@@ -359,8 +359,10 @@ export function YouTubePlayer({
         />
         {/* Title overlay - hides YouTube's title when showTitle is false */}
         {!showTitle && (
-          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black via-black/80 to-transparent pointer-events-none z-10">
-            <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute top-0 left-0 right-0 h-20 bg-black pointer-events-none z-10 flex items-center justify-center">
+            <span className="text-white font-bold text-lg tracking-widest opacity-60">
+              CENSORED
+            </span>
           </div>
         )}
       </div>
