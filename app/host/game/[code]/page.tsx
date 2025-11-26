@@ -18,12 +18,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { GameState, Question, BuzzerEvent, QuestionScoring } from "@/types/game";
+import { GameState, Question, BuzzerEvent, QuestionScoring, VideoDisplayMode } from "@/types/game";
 import { EndGameScreen } from "@/components/EndGameScreen";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useHostPeerSync } from "@/hooks/usePeerSync";
 import { Wifi, WifiOff } from "lucide-react";
 import { LobbyControlsDialog } from "@/components/LobbyControls";
+import { YouTubePlayer } from "@/components/youtube-player";
 
 export default function HostGame({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -46,6 +47,9 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   const [savedBuzzerQueue, setSavedBuzzerQueue] = useState<BuzzerEvent[]>([]); // Saved queue when reopening a question
   const gameStateRef = useRef<GameState | null>(null);
   const currentVersionRef = useRef(0);
+  // Video control states
+  const [videoShowTitle, setVideoShowTitle] = useState(true);
+  const [videoMode, setVideoMode] = useState<VideoDisplayMode>('full');
 
   // Keep refs in sync
   useEffect(() => {
@@ -294,11 +298,15 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
       // Set reveal timestamp 600ms in the future
       // This gives all clients time to receive the update and display simultaneously
       const revealAt = Date.now() + 600;
-      await updateGameState({ 
+      await updateGameState({
         currentQuestion: selectedQuestion,
         buzzerQueue: [],
         questionRevealAt: revealAt,
-        answerRevealAt: undefined // Clear any previous answer reveal
+        answerRevealAt: undefined, // Clear any previous answer reveal
+        videoOptions: {
+          showTitle: videoShowTitle,
+          mode: videoMode
+        }
       });
     }
   };
@@ -897,10 +905,20 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                 }`}>{selectedQuestion?.question}</div>
                 {selectedQuestion?.questionImageUrl && (
                   <div className="mt-3 flex justify-center">
-                    <img 
-                      src={selectedQuestion.questionImageUrl} 
-                      alt="Question" 
+                    <img
+                      src={selectedQuestion.questionImageUrl}
+                      alt="Question"
                       className="max-w-full max-h-40 rounded-lg object-contain"
+                    />
+                  </div>
+                )}
+                {selectedQuestion?.questionVideoUrl && (
+                  <div className="mt-3">
+                    <YouTubePlayer
+                      videoUrl={selectedQuestion.questionVideoUrl}
+                      showTitle={videoShowTitle}
+                      mode={videoMode}
+                      className="max-h-60"
                     />
                   </div>
                 )}
@@ -916,10 +934,20 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   }`}>{selectedQuestion?.answer}</div>
                   {selectedQuestion?.answerImageUrl && (
                     <div className="mt-3 flex justify-center">
-                      <img 
-                        src={selectedQuestion.answerImageUrl} 
-                        alt="Answer" 
+                      <img
+                        src={selectedQuestion.answerImageUrl}
+                        alt="Answer"
                         className="max-w-full max-h-40 rounded-lg object-contain"
+                      />
+                    </div>
+                  )}
+                  {selectedQuestion?.answerVideoUrl && (
+                    <div className="mt-3">
+                      <YouTubePlayer
+                        videoUrl={selectedQuestion.answerVideoUrl}
+                        showTitle={videoShowTitle}
+                        mode={videoMode}
+                        className="max-h-60"
                       />
                     </div>
                   )}
@@ -970,7 +998,56 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   </div>
                 </div>
               </div>
-              
+
+              {/* Video Controls - only show if question or answer has a video */}
+              {(selectedQuestion?.questionVideoUrl || selectedQuestion?.answerVideoUrl) && (
+                <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-3 rounded-lg">
+                  <div className="text-sm font-semibold text-gray-300 mb-3">Video Controls</div>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-300">Show Video Title</span>
+                      <Button
+                        onClick={() => setVideoShowTitle(!videoShowTitle)}
+                        variant={videoShowTitle ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 px-3 text-xs"
+                      >
+                        {videoShowTitle ? "Visible" : "Hidden"}
+                      </Button>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-300 mb-2">Display Mode</div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setVideoMode('full')}
+                          variant={videoMode === 'full' ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1 h-8 text-xs"
+                        >
+                          Full
+                        </Button>
+                        <Button
+                          onClick={() => setVideoMode('audio-only')}
+                          variant={videoMode === 'audio-only' ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1 h-8 text-xs"
+                        >
+                          Audio Only
+                        </Button>
+                        <Button
+                          onClick={() => setVideoMode('muted')}
+                          variant={videoMode === 'muted' ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1 h-8 text-xs"
+                        >
+                          Muted
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <Button onClick={showToPlayers} className="flex-1" size="sm" variant={gameState?.currentQuestion?.id === selectedQuestion?.id ? "secondary" : "default"}>

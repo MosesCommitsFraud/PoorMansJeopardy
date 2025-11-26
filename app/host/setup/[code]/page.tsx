@@ -10,12 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X, Video } from "lucide-react";
 import { Category, Question, GameTemplate } from "@/types/game";
 import { templateStorage } from "@/lib/template-storage";
 import { CategoryBrowser } from "@/components/category-browser";
 import { generateCategoriesFromDataset } from "@/lib/questions-loader";
 import { GifPicker } from "@/components/gif-picker";
+import { YouTubePlayer, isYouTubeUrl } from "@/components/youtube-player";
 
 export default function HostSetup({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -313,6 +314,16 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     updateQuestion(categoryId, questionId, field, '');
   };
 
+  const handleVideoUrlChange = (categoryId: string, questionId: string, type: 'question' | 'answer', url: string) => {
+    const field = type === 'question' ? 'questionVideoUrl' : 'answerVideoUrl';
+    updateQuestion(categoryId, questionId, field, url);
+  };
+
+  const removeVideo = (categoryId: string, questionId: string, type: 'question' | 'answer') => {
+    const field = type === 'question' ? 'questionVideoUrl' : 'answerVideoUrl';
+    updateQuestion(categoryId, questionId, field, '');
+  };
+
   // Check if a string is a valid image URL
   const isImageUrl = (text: string): boolean => {
     // Must start with http:// or https://
@@ -537,9 +548,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                         />
                         {question.questionImageUrl && (
                           <div className="mt-2 relative border rounded overflow-hidden">
-                            <img 
-                              src={question.questionImageUrl} 
-                              alt="Question" 
+                            <img
+                              src={question.questionImageUrl}
+                              alt="Question"
                               className="w-full max-h-32 object-contain bg-black/20"
                             />
                             <Button
@@ -553,6 +564,43 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                             </Button>
                           </div>
                         )}
+                        <div className="mt-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Video className="h-3 w-3" />
+                            <Label className="text-xs">YouTube Video URL</Label>
+                          </div>
+                          <Input
+                            type="text"
+                            value={question.questionVideoUrl || ''}
+                            onChange={(e) => handleVideoUrlChange(category.id, question.id, 'question', e.target.value)}
+                            placeholder="https://youtube.com/watch?v=..."
+                            className="text-sm"
+                          />
+                          {question.questionVideoUrl && isYouTubeUrl(question.questionVideoUrl) && (
+                            <div className="mt-2 relative border rounded overflow-hidden">
+                              <YouTubePlayer
+                                videoUrl={question.questionVideoUrl}
+                                showTitle={true}
+                                mode="full"
+                                className="max-h-40"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                className="absolute top-2 right-2 z-10"
+                                onClick={() => removeVideo(category.id, question.id, 'question')}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                          {question.questionVideoUrl && !isYouTubeUrl(question.questionVideoUrl) && (
+                            <div className="mt-1 text-xs text-red-500">
+                              Invalid YouTube URL
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="col-span-6">
                         <div className="flex items-center justify-between mb-1">
@@ -577,9 +625,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                         />
                         {question.answerImageUrl && (
                           <div className="mt-2 relative border rounded overflow-hidden">
-                            <img 
-                              src={question.answerImageUrl} 
-                              alt="Answer" 
+                            <img
+                              src={question.answerImageUrl}
+                              alt="Answer"
                               className="w-full max-h-32 object-contain bg-black/20"
                             />
                             <Button
@@ -593,6 +641,43 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                             </Button>
                           </div>
                         )}
+                        <div className="mt-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Video className="h-3 w-3" />
+                            <Label className="text-xs">YouTube Video URL</Label>
+                          </div>
+                          <Input
+                            type="text"
+                            value={question.answerVideoUrl || ''}
+                            onChange={(e) => handleVideoUrlChange(category.id, question.id, 'answer', e.target.value)}
+                            placeholder="https://youtube.com/watch?v=..."
+                            className="text-sm"
+                          />
+                          {question.answerVideoUrl && isYouTubeUrl(question.answerVideoUrl) && (
+                            <div className="mt-2 relative border rounded overflow-hidden">
+                              <YouTubePlayer
+                                videoUrl={question.answerVideoUrl}
+                                showTitle={true}
+                                mode="full"
+                                className="max-h-40"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                className="absolute top-2 right-2 z-10"
+                                onClick={() => removeVideo(category.id, question.id, 'answer')}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                          {question.answerVideoUrl && !isYouTubeUrl(question.answerVideoUrl) && (
+                            <div className="mt-1 text-xs text-red-500">
+                              Invalid YouTube URL
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

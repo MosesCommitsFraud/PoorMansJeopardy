@@ -22,6 +22,7 @@ import { EndGameScreen } from "@/components/EndGameScreen";
 import { useSettings } from "@/contexts/SettingsContext";
 import { usePlayerPeerSync } from "@/hooks/usePeerSync";
 import { Wifi, WifiOff } from "lucide-react";
+import { YouTubePlayer } from "@/components/youtube-player";
 
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -700,14 +701,25 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 </div>
                 {gameState?.currentQuestion?.questionImageUrl && (
                   <div className={`mt-4 flex justify-center ${answerVisible ? 'max-h-32' : 'max-h-56'}`}>
-                    <img 
-                      src={gameState.currentQuestion.questionImageUrl} 
-                      alt="Question" 
+                    <img
+                      src={gameState.currentQuestion.questionImageUrl}
+                      alt="Question"
                       className={`rounded-lg object-contain ${
-                        answerVisible 
-                          ? 'max-h-32 max-w-[50%]' 
+                        answerVisible
+                          ? 'max-h-32 max-w-[50%]'
                           : 'max-h-56 max-w-full'
                       }`}
+                    />
+                  </div>
+                )}
+                {gameState?.currentQuestion?.questionVideoUrl && (
+                  <div className={`mt-4 ${answerVisible ? 'max-w-md' : 'max-w-2xl'} w-full`}>
+                    <YouTubePlayer
+                      videoUrl={gameState.currentQuestion.questionVideoUrl}
+                      showTitle={gameState.videoOptions?.showTitle ?? true}
+                      mode={gameState.videoOptions?.mode ?? 'full'}
+                      autoplay={true}
+                      startAt={gameState.questionRevealAt}
                     />
                   </div>
                 )}
@@ -728,10 +740,21 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                   </div>
                   {gameState?.currentQuestion?.answerImageUrl && (
                     <div className="mt-4 flex justify-center max-h-40">
-                      <img 
-                        src={gameState.currentQuestion.answerImageUrl} 
-                        alt="Answer" 
+                      <img
+                        src={gameState.currentQuestion.answerImageUrl}
+                        alt="Answer"
                         className="max-h-40 max-w-full object-contain rounded-lg"
+                      />
+                    </div>
+                  )}
+                  {gameState?.currentQuestion?.answerVideoUrl && (
+                    <div className="mt-4 max-w-2xl w-full mx-auto">
+                      <YouTubePlayer
+                        videoUrl={gameState.currentQuestion.answerVideoUrl}
+                        showTitle={gameState.videoOptions?.showTitle ?? true}
+                        mode={gameState.videoOptions?.mode ?? 'full'}
+                        autoplay={true}
+                        startAt={gameState.answerRevealAt}
                       />
                     </div>
                   )}

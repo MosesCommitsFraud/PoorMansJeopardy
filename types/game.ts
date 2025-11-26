@@ -6,6 +6,15 @@ export interface Question {
   answered: boolean;
   questionImageUrl?: string; // URL to image or GIF for the question
   answerImageUrl?: string;   // URL to image or GIF for the answer
+  questionVideoUrl?: string; // URL to YouTube video for the question
+  answerVideoUrl?: string;   // URL to YouTube video for the answer
+}
+
+export type VideoDisplayMode = 'full' | 'audio-only' | 'muted';
+
+export interface VideoControlOptions {
+  showTitle: boolean;
+  mode: VideoDisplayMode;
 }
 
 export interface Category {
@@ -53,6 +62,8 @@ export interface GameState {
   answerRevealAt?: number; // When to reveal the answer to players
   // Scoring history per question - allows reviewing/modifying after closing
   questionScoring?: Record<string, QuestionScoring>;
+  // Video control options for current question/answer
+  videoOptions?: VideoControlOptions;
 }
 
 export interface Lobby {
