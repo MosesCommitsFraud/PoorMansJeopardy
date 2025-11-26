@@ -344,16 +344,17 @@ export function YouTubePlayer({
     };
   }, [startAt, isReady]);
 
-  // Handle play/pause commands from host (only after initial synchronized start)
+  // Handle play/pause commands from host
   useEffect(() => {
-    if (!playerRef.current || !isReady || isHost) return;
+    if (!playerRef.current || !isReady) return;
 
-    // Only respond to play/pause after synchronized start has completed
+    // For players: Only respond to play/pause after synchronized start has completed
+    // For host: Always respond to play/pause commands
     if (playing !== undefined) {
       const now = Date.now();
       const syncStartCompleted = !startAt || startAt <= now;
 
-      if (syncStartCompleted) {
+      if (isHost || syncStartCompleted) {
         try {
           if (playing) {
             playerRef.current.playVideo();
@@ -370,14 +371,14 @@ export function YouTubePlayer({
 
   // Handle seek commands from host
   useEffect(() => {
-    if (!playerRef.current || !isReady || isHost || seekTo === undefined) return;
+    if (!playerRef.current || !isReady || seekTo === undefined) return;
 
     try {
       playerRef.current.seekTo(seekTo, true);
     } catch (error) {
       console.error('Error seeking:', error);
     }
-  }, [seekTo, commandAt, isReady, isHost]);
+  }, [seekTo, commandAt, isReady]);
 
   // Handle volume changes
   const handleVolumeChange = (value: number[]) => {
