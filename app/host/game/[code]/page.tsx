@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Trophy, Plus, Minus, AlertCircle, Clock, Play, Pause, RotateCcw, Power, SkipBack } from "lucide-react";
+import { Bell, Trophy, Plus, Minus, AlertCircle, Clock, Play, Pause, RotateCcw, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -50,6 +50,18 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   // Video control states
   const [videoShowTitle, setVideoShowTitle] = useState(true);
   const [videoMode, setVideoMode] = useState<VideoDisplayMode>('full');
+
+  // Live update video options when controls change
+  const updateVideoOptions = async (showTitle: boolean, mode: VideoDisplayMode) => {
+    if (gameState?.currentQuestion) {
+      await updateGameState({
+        videoOptions: {
+          showTitle,
+          mode
+        }
+      });
+    }
+  };
 
   // Keep refs in sync
   useEffect(() => {
@@ -320,31 +332,65 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     });
   };
 
-  const startVideo = async () => {
-    // Set timestamp for synchronized video start across all players
-    const playAt = Date.now() + 600;
-    await updateGameState({
-      videoPlayAt: playAt,
-      videoOptions: {
-        showTitle: videoShowTitle,
-        mode: videoMode
-      }
-    });
-  };
-
   const toggleVideoPlayback = async () => {
     const isPlaying = gameState?.videoPlaying ?? false;
+
+    // If not started yet, use synchronized start
+    if (!gameState?.videoPlayAt) {
+      const playAt = Date.now() + 600;
+      await updateGameState({
+        videoPlayAt: playAt,
+        videoPlaying: true,
+        videoCommandAt: Date.now(),
+        videoOptions: {
+          showTitle: videoShowTitle,
+          mode: videoMode
+        }
+      });
+    } else {
+      // Toggle playback
+      await updateGameState({
+        videoPlaying: !isPlaying,
+        videoCommandAt: Date.now()
+      });
+    }
+  };
+
+  const restartVideo = async () => {
+    // Get URL timestamp from current question's video
+    const videoUrl = selectedQuestion?.questionVideoUrl || selectedQuestion?.answerVideoUrl || '';
+    const urlTimestamp = extractTimestampFromUrl(videoUrl);
+
     await updateGameState({
-      videoPlaying: !isPlaying,
+      videoSeekTo: urlTimestamp ?? 0,
       videoCommandAt: Date.now()
     });
   };
 
-  const seekVideo = async (seconds: number) => {
-    await updateGameState({
-      videoSeekTo: seconds,
-      videoCommandAt: Date.now()
-    });
+  // Extract timestamp from YouTube URL (matches youtube-player.tsx logic)
+  const extractTimestampFromUrl = (url: string): number | null => {
+    const timeMatch = url.match(/[?&#]t=([^&\s]+)/);
+    if (!timeMatch) return null;
+
+    const timeString = timeMatch[1];
+    const hourMatch = timeString.match(/(\d+)h/);
+    const minuteMatch = timeString.match(/(\d+)m/);
+    const secondMatch = timeString.match(/(\d+)s/);
+
+    let totalSeconds = 0;
+
+    if (hourMatch || minuteMatch || secondMatch) {
+      if (hourMatch) totalSeconds += parseInt(hourMatch[1]) * 3600;
+      if (minuteMatch) totalSeconds += parseInt(minuteMatch[1]) * 60;
+      if (secondMatch) totalSeconds += parseInt(secondMatch[1]);
+    } else {
+      const seconds = parseInt(timeString);
+      if (!isNaN(seconds)) {
+        totalSeconds = seconds;
+      }
+    }
+
+    return totalSeconds > 0 ? totalSeconds : null;
   };
 
   const dismissQuestion = async () => {
@@ -1044,7 +1090,11 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-300">Show Video Title</span>
                       <Button
-                        onClick={() => setVideoShowTitle(!videoShowTitle)}
+                        onClick={() => {
+                          const newValue = !videoShowTitle;
+                          setVideoShowTitle(newValue);
+                          updateVideoOptions(newValue, videoMode);
+                        }}
                         variant={videoShowTitle ? "default" : "outline"}
                         size="sm"
                         className="h-7 px-3 text-xs"
@@ -1056,7 +1106,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                       <div className="text-sm text-gray-300 mb-2">Display Mode</div>
                       <div className="flex gap-2">
                         <Button
-                          onClick={() => setVideoMode('full')}
+                          onClick={() => {
+                            setVideoMode('full');
+                            updateVideoOptions(videoShowTitle, 'full');
+                          }}
                           variant={videoMode === 'full' ? "default" : "outline"}
                           size="sm"
                           className="flex-1 h-8 text-xs"
@@ -1064,7 +1117,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                           Full
                         </Button>
                         <Button
-                          onClick={() => setVideoMode('audio-only')}
+                          onClick={() => {
+                            setVideoMode('audio-only');
+                            updateVideoOptions(videoShowTitle, 'audio-only');
+                          }}
                           variant={videoMode === 'audio-only' ? "default" : "outline"}
                           size="sm"
                           className="flex-1 h-8 text-xs"
@@ -1072,7 +1128,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                           Audio Only
                         </Button>
                         <Button
-                          onClick={() => setVideoMode('muted')}
+                          onClick={() => {
+                            setVideoMode('muted');
+                            updateVideoOptions(videoShowTitle, 'muted');
+                          }}
                           variant={videoMode === 'muted' ? "default" : "outline"}
                           size="sm"
                           className="flex-1 h-8 text-xs"
@@ -1082,62 +1141,38 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Button
-                        onClick={startVideo}
-                        variant="default"
-                        size="sm"
-                        className="w-full"
-                        disabled={!gameState?.currentQuestion}
-                      >
-                        <Play className="h-3 w-3 mr-2" />
-                        Start Video for All Players
-                      </Button>
-                      <p className="text-xs text-gray-400 mt-1 text-center">
-                        Synchronized start ensures no one has an advantage
-                      </p>
-                      <div className="pt-2 border-t border-gray-600/30">
-                        <div className="text-xs text-gray-300 mb-2">Playback Controls</div>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={toggleVideoPlayback}
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                          >
-                            {gameState?.videoPlaying ? (
-                              <>
-                                <Pause className="h-3 w-3 mr-1" />
-                                Pause
-                              </>
-                            ) : (
-                              <>
-                                <Play className="h-3 w-3 mr-1" />
-                                Play
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            onClick={() => seekVideo(0)}
-                            variant="outline"
-                            size="sm"
-                            title="Restart from beginning"
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            onClick={async () => {
-                              // Rewind 10 seconds
-                              const currentTime = gameState?.videoSeekTo ?? 0;
-                              seekVideo(Math.max(0, currentTime - 10));
-                            }}
-                            variant="outline"
-                            size="sm"
-                            title="Rewind 10 seconds"
-                          >
-                            <SkipBack className="h-3 w-3" />
-                          </Button>
-                        </div>
+                      <div className="text-xs text-gray-300 mb-2">Playback Controls</div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={toggleVideoPlayback}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          {gameState?.videoPlaying ? (
+                            <>
+                              <Pause className="h-3 w-3 mr-1" />
+                              Pause
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-3 w-3 mr-1" />
+                              Play
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={restartVideo}
+                          variant="outline"
+                          size="sm"
+                          title="Restart video (from timestamp if present)"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                        </Button>
                       </div>
+                      <p className="text-xs text-gray-400 text-center">
+                        Controls are synchronized across all players
+                      </p>
                     </div>
                   </div>
                 </div>
