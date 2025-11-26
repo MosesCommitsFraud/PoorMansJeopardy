@@ -13,7 +13,8 @@ export type PeerMessage =
   | { type: "pong" }
   | { type: "request-state" }
   | { type: "request-lobby" }
-  | { type: "lobby-closed" };
+  | { type: "lobby-closed" }
+  | { type: "player-kicked"; playerId: string };
 
 export interface PeerSyncCallbacks {
   onStateUpdate?: (gameState: GameState, version: number) => void;
@@ -23,6 +24,7 @@ export interface PeerSyncCallbacks {
   onPlayerDisconnected?: (peerId: string) => void;
   onConnectionStatus?: (status: "connecting" | "connected" | "disconnected" | "error") => void;
   onLobbyClosed?: () => void;
+  onPlayerKicked?: (playerId: string) => void;
   onError?: (error: Error) => void;
 }
 
@@ -391,6 +393,15 @@ export class HostPeerManager {
     });
   }
 
+  // Broadcast player kicked to all connected players (so kicked player knows they were kicked)
+  broadcastPlayerKicked(playerId: string) {
+    console.log("[PeerSync Host] Broadcasting player kicked:", playerId);
+    const message: PeerMessage = { type: "player-kicked", playerId };
+    this.connections.forEach((conn) => {
+      this.sendTo(conn, message);
+    });
+  }
+
   getConnectedCount(): number {
     return this.connections.size;
   }
@@ -631,6 +642,10 @@ export class PlayerPeerManager {
       case "lobby-closed":
         console.log("[PeerSync Player] Received lobby-closed message");
         this.callbacks.onLobbyClosed?.();
+        break;
+      case "player-kicked":
+        console.log("[PeerSync Player] Received player-kicked message for:", message.playerId);
+        this.callbacks.onPlayerKicked?.(message.playerId);
         break;
       case "pong":
         // Connection is alive

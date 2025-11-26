@@ -91,6 +91,15 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     setShowAlert(true);
   }, []);
 
+  // Handle being kicked by host
+  const handlePlayerKicked = useCallback((kickedPlayerId: string) => {
+    const myPlayerId = localStorage.getItem("jeopardy_player_id");
+    if (kickedPlayerId === myPlayerId) {
+      setAlertMessage("You have been kicked from the game by the host.");
+      setShowAlert(true);
+    }
+  }, []);
+
   // PeerJS player - connects to host for real-time updates
   const { 
     status: peerStatus, 
@@ -102,6 +111,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
     enabled: !!playerId,
     onStateUpdate: handlePeerStateUpdate,
     onLobbyClosed: handleLobbyClosed,
+    onPlayerKicked: handlePlayerKicked,
   });
 
   // Polling is now just a backup - P2P handles real-time sync
@@ -379,8 +389,8 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   const handleAlertClose = () => {
     setShowAlert(false);
 
-    // If lobby was closed, redirect to home
-    if (alertMessage.includes("closed by the host")) {
+    // If lobby was closed or player was kicked, redirect to home
+    if (alertMessage.includes("closed by the host") || alertMessage.includes("been kicked")) {
       localStorage.removeItem("jeopardy_player_id");
       localStorage.removeItem("jeopardy_player_name");
       localStorage.removeItem("jeopardy_lobby_code");

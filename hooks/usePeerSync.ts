@@ -28,6 +28,7 @@ interface UsePlayerPeerSyncOptions {
   onStateUpdate?: (gameState: GameState, version: number) => void;
   onLobbyUpdate?: (lobby: Lobby, version: number) => void;
   onLobbyClosed?: () => void;
+  onPlayerKicked?: (playerId: string) => void;
 }
 
 // Hook for host - manages connections from all players
@@ -98,6 +99,10 @@ export function useHostPeerSync({
     managerRef.current?.broadcastLobbyClosed();
   }, []);
 
+  const broadcastPlayerKicked = useCallback((playerId: string) => {
+    managerRef.current?.broadcastPlayerKicked(playerId);
+  }, []);
+
   return {
     status,
     connectedPlayers,
@@ -105,6 +110,7 @@ export function useHostPeerSync({
     broadcastState,
     broadcastLobby,
     broadcastLobbyClosed,
+    broadcastPlayerKicked,
     isConnected: status === "connected",
   };
 }
@@ -117,12 +123,14 @@ export function usePlayerPeerSync({
   onStateUpdate,
   onLobbyUpdate,
   onLobbyClosed,
+  onPlayerKicked,
 }: UsePlayerPeerSyncOptions) {
   const managerRef = useRef<PlayerPeerManager | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const onStateUpdateRef = useRef(onStateUpdate);
   const onLobbyUpdateRef = useRef(onLobbyUpdate);
   const onLobbyClosedRef = useRef(onLobbyClosed);
+  const onPlayerKickedRef = useRef(onPlayerKicked);
 
   // Keep callback refs updated
   useEffect(() => {
@@ -138,6 +146,10 @@ export function usePlayerPeerSync({
   }, [onLobbyClosed]);
 
   useEffect(() => {
+    onPlayerKickedRef.current = onPlayerKicked;
+  }, [onPlayerKicked]);
+
+  useEffect(() => {
     if (!enabled || !lobbyCode || !playerId) return;
 
     const callbacks: PeerSyncCallbacks = {
@@ -150,6 +162,9 @@ export function usePlayerPeerSync({
       },
       onLobbyClosed: () => {
         onLobbyClosedRef.current?.();
+      },
+      onPlayerKicked: (kickedPlayerId) => {
+        onPlayerKickedRef.current?.(kickedPlayerId);
       },
       onError: (err) => console.error("[usePlayerPeerSync] Error:", err),
     };

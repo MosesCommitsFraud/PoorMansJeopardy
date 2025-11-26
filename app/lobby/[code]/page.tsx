@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle, AlertCircle, Edit2, Wifi, WifiOff } from "lucide-react";
+import { Crown, Users, Copy, Check, Settings, Play, LogOut, XCircle, AlertCircle, Edit2, Wifi, WifiOff, UserX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@heroui/spinner";
 import { 
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Lobby } from "@/types/game";
 import { useHostPeerSync, usePlayerPeerSync } from "@/hooks/usePeerSync";
+import { LobbyControls } from "@/components/LobbyControls";
 
 export default function LobbyRoom({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -94,6 +95,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     connectedPlayers,
     broadcastLobby,
     broadcastLobbyClosed,
+    broadcastPlayerKicked,
     isConnected: isHostPeerConnected 
   } = useHostPeerSync({
     lobbyCode: resolvedParams.code,
@@ -107,6 +109,15 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     setShowAlert(true);
   }, []);
 
+  // Handle being kicked by host (for players)
+  const handlePlayerKicked = useCallback((kickedPlayerId: string) => {
+    const myPlayerId = localStorage.getItem("jeopardy_player_id");
+    if (kickedPlayerId === myPlayerId) {
+      setAlertMessage("You have been kicked from the lobby by the host.");
+      setShowAlert(true);
+    }
+  }, []);
+
   // PeerJS for player - receives lobby updates
   const { 
     status: playerPeerStatus,
@@ -117,6 +128,7 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
     enabled: !isHost && !!playerId,
     onLobbyClosed: handleLobbyClosed,
     onLobbyUpdate: handlePeerLobbyUpdate,
+    onPlayerKicked: handlePlayerKicked,
   });
 
   const isPeerConnected = isHost ? isHostPeerConnected : isPlayerPeerConnected;
@@ -339,13 +351,50 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
   const handleAlertClose = () => {
     setShowAlert(false);
     
-    // If lobby was closed, redirect to home
-    if (alertMessage.includes("no longer available")) {
+    // If lobby was closed or player was kicked, redirect to home
+    if (alertMessage.includes("no longer available") || 
+        alertMessage.includes("been kicked") ||
+        alertMessage.includes("been closed")) {
       localStorage.removeItem("jeopardy_player_id");
       localStorage.removeItem("jeopardy_player_name");
       localStorage.removeItem("jeopardy_lobby_code");
       localStorage.removeItem("jeopardy_host_id");
       router.push("/");
+    }
+  };
+
+  // Handle kicking a player (host only)
+  const handleKickPlayer = async (playerIdToKick: string, playerName: string) => {
+    const hostId = localStorage.getItem("jeopardy_host_id");
+    
+    try {
+      const response = await fetch(`/api/lobby/${resolvedParams.code}/kick`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hostId, playerIdToKick }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Broadcast kick notification via P2P
+        broadcastPlayerKicked(playerIdToKick);
+        
+        // Reload lobby to get updated player list
+        await loadLobby(hostId);
+        
+        // Broadcast updated lobby state
+        if (lobbyRef.current && isHostPeerConnected) {
+          broadcastLobby(lobbyRef.current, data.version);
+        }
+      } else {
+        const data = await response.json();
+        setAlertMessage(data.error || "Failed to kick player");
+        setShowAlert(true);
+      }
+    } catch (error) {
+      setAlertMessage("Failed to kick player");
+      setShowAlert(true);
     }
   };
 
@@ -559,75 +608,86 @@ export default function LobbyRoom({ params }: { params: Promise<{ code: string }
 
         {/* Host Controls */}
         {isHost && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Host Controls</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-muted/50 p-4 rounded-lg border space-y-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground mb-1">Game Setup Status:</p>
-                  {lobby.gameState.categories.length > 0 ? (
-                    <div className="space-y-2">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Host Controls</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg border space-y-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground mb-1">Game Setup Status:</p>
+                    {lobby.gameState.categories.length > 0 ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary">
+                            {lobby.gameState.categories.length} {lobby.gameState.categories.length === 1 ? "Category" : "Categories"}
+                          </Badge>
+                          <Badge variant="secondary">
+                            {lobby.gameState.categories.reduce((total: number, cat: any) => total + cat.questions.length, 0)} Questions
+                          </Badge>
+                          <Badge variant="default" className="bg-green-600">
+                            ✓ Ready to Start
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Categories: {lobby.gameState.categories.map((cat: any) => cat.name).join(", ")}
+                        </div>
+                      </div>
+                    ) : (
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">
-                          {lobby.gameState.categories.length} {lobby.gameState.categories.length === 1 ? "Category" : "Categories"}
-                        </Badge>
-                        <Badge variant="secondary">
-                          {lobby.gameState.categories.reduce((total: number, cat: any) => total + cat.questions.length, 0)} Questions
-                        </Badge>
-                        <Badge variant="default" className="bg-green-600">
-                          ✓ Ready to Start
-                        </Badge>
+                        <Badge variant="destructive">⚠️ Not Configured</Badge>
+                        <span className="text-xs text-muted-foreground">Click "Setup Game" to add categories</span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Categories: {lobby.gameState.categories.map((cat: any) => cat.name).join(", ")}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="destructive">⚠️ Not Configured</Badge>
-                      <span className="text-xs text-muted-foreground">Click "Setup Game" to add categories</span>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="border-t pt-3">
-                  <p className="text-sm font-semibold text-foreground mb-1">Players in Lobby:</p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">
-                      {lobby.gameState.players.length} {lobby.gameState.players.length === 1 ? "Player" : "Players"}
-                    </Badge>
-                    {lobby.gameState.players.length > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        {lobby.gameState.players.map((p: any) => p.name).join(", ")}
-                      </span>
                     )}
                   </div>
+                  
+                  <div className="border-t pt-3">
+                    <p className="text-sm font-semibold text-foreground mb-1">Players in Lobby:</p>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">
+                        {lobby.gameState.players.length} {lobby.gameState.players.length === 1 ? "Player" : "Players"}
+                      </Badge>
+                      {lobby.gameState.players.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {lobby.gameState.players.map((p: any) => p.name).join(", ")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex gap-3">
-                <Button onClick={goToSetup} variant="outline" className="flex-1">
-                  <Settings className="mr-2 h-4 w-4" />
-                  {lobby.gameState.categories.length > 0 ? "Edit Game" : "Setup Game"}
-                </Button>
-                <Button 
-                  onClick={startGame} 
-                  className="flex-1"
-                  disabled={!lobby.gameState.categories.length}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Start Game
-                </Button>
-              </div>
+                <div className="flex gap-3">
+                  <Button onClick={goToSetup} variant="outline" className="flex-1">
+                    <Settings className="mr-2 h-4 w-4" />
+                    {lobby.gameState.categories.length > 0 ? "Edit Game" : "Setup Game"}
+                  </Button>
+                  <Button 
+                    onClick={startGame} 
+                    className="flex-1"
+                    disabled={!lobby.gameState.categories.length}
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    Start Game
+                  </Button>
+                </div>
 
-              <Button onClick={leaveLobby} variant="destructive" className="w-full">
-                <XCircle className="mr-2 h-4 w-4" />
-                Close Lobby
-              </Button>
-            </CardContent>
-          </Card>
+                <Button onClick={leaveLobby} variant="destructive" className="w-full">
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Close Lobby
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Player Management */}
+            <LobbyControls
+              players={lobby.gameState.players}
+              hostId={lobby.hostId}
+              lobbyCode={resolvedParams.code}
+              playerWins={lobby.gameState.playerWins}
+              onKickPlayer={handleKickPlayer}
+            />
+          </div>
         )}
 
         {/* Player Waiting */}

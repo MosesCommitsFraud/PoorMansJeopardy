@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw, Power } from "lucide-react";
+import { Bell, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw, Power, Settings2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +23,7 @@ import { EndGameScreen } from "@/components/EndGameScreen";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useHostPeerSync } from "@/hooks/usePeerSync";
 import { Wifi, WifiOff } from "lucide-react";
+import { LobbyControlsDialog } from "@/components/LobbyControls";
 
 export default function HostGame({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -96,6 +97,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     connectedPlayers, 
     broadcastState,
     broadcastLobbyClosed,
+    broadcastPlayerKicked,
     isConnected: isPeerConnected 
   } = useHostPeerSync({
     lobbyCode: resolvedParams.code,
@@ -606,6 +608,45 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
     }
   };
 
+  // Handle kicking a player during the game
+  const handleKickPlayer = async (playerIdToKick: string, playerName: string) => {
+    const hostId = localStorage.getItem("jeopardy_host_id");
+    
+    try {
+      const response = await fetch(`/api/lobby/${resolvedParams.code}/kick`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hostId, playerIdToKick }),
+      });
+
+      if (response.ok) {
+        // Broadcast kick notification via P2P
+        broadcastPlayerKicked(playerIdToKick);
+        
+        // Update local state to remove the player
+        const currentState = gameStateRef.current;
+        if (currentState) {
+          const newState = {
+            ...currentState,
+            players: currentState.players.filter(p => p.id !== playerIdToKick),
+            // Also remove from buzzer queue if present
+            buzzerQueue: (currentState.buzzerQueue || []).filter(b => b.playerId !== playerIdToKick)
+          };
+          setGameState(newState);
+          gameStateRef.current = newState;
+          await persistAndBroadcast(newState);
+        }
+      } else {
+        const data = await response.json();
+        setAlertMessage(data.error || "Failed to kick player");
+        setShowAlert(true);
+      }
+    } catch (error) {
+      setAlertMessage("Failed to kick player");
+      setShowAlert(true);
+    }
+  };
+
   if (!gameState) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -664,6 +705,13 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               </Badge>
             </div>
             <div className="flex gap-2">
+              <LobbyControlsDialog
+                players={gameState.players}
+                hostId={localStorage.getItem("jeopardy_host_id") || ""}
+                lobbyCode={resolvedParams.code}
+                playerWins={gameState.playerWins}
+                onKickPlayer={handleKickPlayer}
+              />
               <Button onClick={endGame} variant="outline" size="sm">
                 <Trophy className="mr-2 h-4 w-4" />
                 End Game
