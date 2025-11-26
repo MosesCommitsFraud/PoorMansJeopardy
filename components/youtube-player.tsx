@@ -223,8 +223,8 @@ export function YouTubePlayer({
               }
             },
             onStateChange: (event: any) => {
-              // Track when video starts playing (only for host using native controls)
-              if (event.data === 1 && isHost) { // 1 = playing
+              // Track when video starts playing
+              if (event.data === 1) { // 1 = playing
                 setHasStartedPlaying(true);
               }
             },
@@ -347,17 +347,23 @@ export function YouTubePlayer({
   // Handle play/pause commands from host (only after initial synchronized start)
   useEffect(() => {
     if (!playerRef.current || !isReady || isHost) return;
-    // Only respond to play/pause if we've already started (skip during synchronized start)
-    if (!startAt && playing !== undefined) {
-      try {
-        if (playing) {
-          playerRef.current.playVideo();
-          setHasStartedPlaying(true);
-        } else if (playing === false) {
-          playerRef.current.pauseVideo();
+
+    // Only respond to play/pause after synchronized start has completed
+    if (playing !== undefined) {
+      const now = Date.now();
+      const syncStartCompleted = !startAt || startAt <= now;
+
+      if (syncStartCompleted) {
+        try {
+          if (playing) {
+            playerRef.current.playVideo();
+            setHasStartedPlaying(true);
+          } else if (playing === false) {
+            playerRef.current.pauseVideo();
+          }
+        } catch (error) {
+          console.error('Error controlling playback:', error);
         }
-      } catch (error) {
-        console.error('Error controlling playback:', error);
       }
     }
   }, [playing, commandAt, isReady, isHost, startAt]);
