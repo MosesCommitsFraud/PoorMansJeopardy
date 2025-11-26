@@ -713,7 +713,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                   </div>
                 )}
                 {gameState?.currentQuestion?.questionVideoUrl && (
-                  <div className={`mt-4 ${answerVisible ? 'max-w-md' : 'max-w-2xl'} w-full`}>
+                  <div className={`mt-4 ${answerVisible ? 'max-w-md' : 'max-w-2xl'} w-full mx-auto`}>
                     <YouTubePlayer
                       videoUrl={gameState.currentQuestion.questionVideoUrl}
                       showTitle={gameState.videoOptions?.showTitle ?? true}
