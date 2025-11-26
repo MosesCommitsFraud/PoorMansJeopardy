@@ -21,6 +21,20 @@ interface YouTubePlayerProps {
   commandAt?: number; // Timestamp of last playback command
 }
 
+// Format time in MM:SS or HH:MM:SS format
+function formatTime(seconds: number): string {
+  if (!seconds || isNaN(seconds)) return '0:00';
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
+
 // Extract YouTube video ID from various URL formats
 function extractVideoId(url: string): string | null {
   const patterns = [
@@ -125,6 +139,9 @@ export function YouTubePlayer({
   const [isReady, setIsReady] = useState(false);
   const [volume, setVolume] = useState(initialVolume);
   const [isMuted, setIsMuted] = useState(false);
+  const [hasStartedPlaying, setHasStartedPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const playerIdRef = useRef(`youtube-player-${Math.random().toString(36).substring(2, 11)}`);
 
@@ -173,6 +190,14 @@ export function YouTubePlayer({
               playerRef.current = event.target;
               setIsReady(true);
 
+              // Get video duration
+              try {
+                const videoDuration = event.target.getDuration();
+                setDuration(videoDuration);
+              } catch (error) {
+                console.error('Error getting duration:', error);
+              }
+
               // Set initial volume
               event.target.setVolume(volume);
 
@@ -195,6 +220,12 @@ export function YouTubePlayer({
                 }
               } catch (error) {
                 console.error('Error checking/stopping player:', error);
+              }
+            },
+            onStateChange: (event: any) => {
+              // Track when video starts playing
+              if (event.data === 1) { // 1 = playing
+                setHasStartedPlaying(true);
               }
             },
             onError: (event: any) => {
@@ -224,6 +255,22 @@ export function YouTubePlayer({
       }
     };
   }, [videoId]);
+
+  // Update current time for host (poll every 100ms when ready)
+  useEffect(() => {
+    if (!isHost || !playerRef.current || !isReady) return;
+
+    const interval = setInterval(() => {
+      try {
+        const time = playerRef.current.getCurrentTime();
+        setCurrentTime(time);
+      } catch (error) {
+        // Ignore errors
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isHost, isReady]);
 
   // Handle mode changes
   useEffect(() => {
@@ -276,6 +323,7 @@ export function YouTubePlayer({
       syncTimeoutRef.current = setTimeout(() => {
         try {
           playerRef.current?.playVideo();
+          setHasStartedPlaying(true);
         } catch (error) {
           console.error('Error starting video:', error);
         }
@@ -283,6 +331,7 @@ export function YouTubePlayer({
     } else {
       try {
         playerRef.current?.playVideo();
+        setHasStartedPlaying(true);
       } catch (error) {
         console.error('Error starting video:', error);
       }
@@ -302,6 +351,7 @@ export function YouTubePlayer({
     try {
       if (playing) {
         playerRef.current.playVideo();
+        setHasStartedPlaying(true);
       } else if (playing === false) {
         playerRef.current.pauseVideo();
       }
@@ -390,6 +440,35 @@ export function YouTubePlayer({
           ref={playerContainerRef}
           className="w-full h-full"
         />
+        {/* Thumbnail blocker - hides video thumbnail until playback starts */}
+        {!hasStartedPlaying && (
+          <div className="absolute inset-0 bg-black z-30 flex items-center justify-center">
+            <div className="text-white text-center">
+              <svg
+                className="w-12 h-12 mx-auto mb-2 opacity-50"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <p className="text-sm opacity-70">
+                {isHost ? 'Click "Start Video" or "Play" to begin' : 'Waiting for host to start video...'}
+              </p>
+            </div>
+          </div>
+        )}
         {/* Title overlay - hides YouTube's title when showTitle is false */}
         {!showTitle && (
           <div className="absolute top-0 left-0 right-0 h-20 bg-black pointer-events-none z-10 flex items-center justify-center">
@@ -400,10 +479,27 @@ export function YouTubePlayer({
         )}
         {/* Interaction blocker - prevents players from controlling the video */}
         {!isHost && (
-          <div className="absolute inset-0 z-20 cursor-not-allowed"
-               style={{ pointerEvents: 'all' }}
-               title="Video playback is controlled by the host"
+          <div
+            className="absolute inset-0 z-50 bg-transparent"
+            style={{
+              pointerEvents: 'all',
+              cursor: 'default'
+            }}
+            onClick={(e) => e.preventDefault()}
+            onDoubleClick={(e) => e.preventDefault()}
+            onContextMenu={(e) => e.preventDefault()}
+            onMouseDown={(e) => e.preventDefault()}
+            onMouseUp={(e) => e.preventDefault()}
+            onTouchStart={(e) => e.preventDefault()}
+            onTouchEnd={(e) => e.preventDefault()}
+            title="Video playback is controlled by the host"
           />
+        )}
+        {/* Host time display */}
+        {isHost && hasStartedPlaying && (
+          <div className="absolute bottom-2 right-2 bg-black/80 text-white px-2 py-1 rounded text-xs font-mono z-40">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
         )}
       </div>
 
