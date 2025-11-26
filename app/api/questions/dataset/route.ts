@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
+// Cache for parsed dataset - persists in memory across requests
+let cachedDataset: any[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 1000 * 60 * 60; // Cache for 1 hour
+
 // Simple CSV parser
 function parseCSV(csvText: string): any[] {
   const lines = csvText.split('\n');
@@ -45,12 +50,20 @@ function parseCSV(csvText: string): any[] {
 // API route to load the questions dataset from CSV
 export async function GET() {
   try {
+    // Check if cache is valid
+    const now = Date.now();
+    if (cachedDataset && (now - cacheTimestamp) < CACHE_DURATION) {
+      console.log('Returning cached dataset');
+      return NextResponse.json(cachedDataset);
+    }
+
+    console.log('Loading and parsing dataset from CSV...');
     const filePath = path.join(process.cwd(), 'assets', 'files', 'JEOPARDY_CSV.csv');
-    
+
     // Read the CSV file
     const fileContent = fs.readFileSync(filePath, 'utf-8');
     const allQuestions = parseCSV(fileContent);
-    
+
     // Extract only the fields we need: Category, Question, Answer, Value
     const simplifiedQuestions = allQuestions.map((q: any) => ({
       category: q.Category || '',
@@ -58,12 +71,17 @@ export async function GET() {
       answer: q.Answer || '',
       value: q.Value || null
     }));
-    
+
+    // Cache the result
+    cachedDataset = simplifiedQuestions;
+    cacheTimestamp = now;
+    console.log(`Cached ${simplifiedQuestions.length} questions`);
+
     return NextResponse.json(simplifiedQuestions);
   } catch (error) {
     console.error('Error loading questions dataset:', error);
     return NextResponse.json(
-      { error: 'Failed to load questions dataset' }, 
+      { error: 'Failed to load questions dataset' },
       { status: 500 }
     );
   }

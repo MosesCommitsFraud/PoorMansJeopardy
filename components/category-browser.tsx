@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Search, Loader2, Database } from "lucide-react";
-import { CategoryData, getUniqueCategories, searchCategories, loadQuestionsDataset } from "@/lib/questions-loader";
+import { CategoryData, searchCategories, loadCategories } from "@/lib/questions-loader";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface CategoryBrowserProps {
@@ -31,7 +31,20 @@ export function CategoryBrowser({
 
   useEffect(() => {
     if (open) {
-      loadCategories();
+      const loadCategoriesData = async () => {
+        setIsLoading(true);
+        try {
+          const categoriesData = await loadCategories();
+          setCategories(categoriesData);
+          setFilteredCategories(categoriesData);
+        } catch (error) {
+          console.error('Error loading categories:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadCategoriesData();
     }
   }, [open]);
 
@@ -39,20 +52,6 @@ export function CategoryBrowser({
     const results = searchCategories(categories, searchTerm);
     setFilteredCategories(results);
   }, [searchTerm, categories]);
-
-  const loadCategories = async () => {
-    setIsLoading(true);
-    try {
-      const questions = await loadQuestionsDataset();
-      const uniqueCategories = getUniqueCategories(questions);
-      setCategories(uniqueCategories);
-      setFilteredCategories(uniqueCategories);
-    } catch (error) {
-      console.error('Error loading categories:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const toggleCategory = (categoryName: string) => {
     setSelectedCategories(prev => {

@@ -73,6 +73,53 @@ export interface CategoryData {
   questionCount: number;
 }
 
+// Client-side cache keys
+const CATEGORIES_CACHE_KEY = 'jeopardy_categories_cache';
+const CATEGORIES_CACHE_TIMESTAMP_KEY = 'jeopardy_categories_timestamp';
+const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
+
+// Load categories from optimized endpoint with client-side caching
+export async function loadCategories(): Promise<CategoryData[]> {
+  try {
+    // Check sessionStorage cache first
+    if (typeof window !== 'undefined') {
+      const cachedData = sessionStorage.getItem(CATEGORIES_CACHE_KEY);
+      const cachedTimestamp = sessionStorage.getItem(CATEGORIES_CACHE_TIMESTAMP_KEY);
+
+      if (cachedData && cachedTimestamp) {
+        const timestamp = parseInt(cachedTimestamp, 10);
+        const now = Date.now();
+
+        if (now - timestamp < CACHE_DURATION) {
+          console.log('Using cached categories from sessionStorage');
+          return JSON.parse(cachedData);
+        }
+      }
+    }
+
+    // Fetch from optimized categories endpoint
+    console.log('Fetching categories from API...');
+    const response = await fetch('/api/questions/categories');
+    if (!response.ok) {
+      throw new Error('Failed to load categories');
+    }
+
+    const categories = await response.json();
+
+    // Cache in sessionStorage
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(categories));
+      sessionStorage.setItem(CATEGORIES_CACHE_TIMESTAMP_KEY, Date.now().toString());
+      console.log(`Cached ${categories.length} categories in sessionStorage`);
+    }
+
+    return categories;
+  } catch (error) {
+    console.error('Error loading categories:', error);
+    return [];
+  }
+}
+
 // Load and parse questions from the dataset
 export async function loadQuestionsDataset(): Promise<JeopardyQuestion[]> {
   try {
