@@ -144,9 +144,16 @@ export function YouTubePlayer({
   const [duration, setDuration] = useState(0);
   const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const playerIdRef = useRef(`youtube-player-${Math.random().toString(36).substring(2, 11)}`);
+  const syncStartHandledRef = useRef(false);
 
   const videoId = extractVideoId(videoUrl);
   const urlTimestamp = extractTimestamp(videoUrl);
+
+  // Reset sync flag when video changes
+  useEffect(() => {
+    syncStartHandledRef.current = false;
+    setHasStartedPlaying(false);
+  }, [videoId]);
 
   // Load YouTube API and initialize player
   useEffect(() => {
@@ -308,16 +315,24 @@ export function YouTubePlayer({
     }
   }, [initialVolume, isReady]);
 
-  // Handle synchronized playback start
+  // Handle synchronized playback start (only for players, not host)
   useEffect(() => {
-    if (!playerRef.current || !isReady || !startAt) return;
+    if (!playerRef.current || !isReady || !startAt || isHost) return;
+
+    // Only handle synchronized start once
+    if (syncStartHandledRef.current) return;
 
     const now = Date.now();
     const delay = startAt - now;
 
+    // Skip if synchronized start was too long ago (already completed)
+    if (delay < -500) return;
+
     if (syncTimeoutRef.current) {
       clearTimeout(syncTimeoutRef.current);
     }
+
+    syncStartHandledRef.current = true; // Mark as handled
 
     if (delay > 0) {
       syncTimeoutRef.current = setTimeout(() => {
@@ -328,7 +343,8 @@ export function YouTubePlayer({
           console.error('Error starting video:', error);
         }
       }, delay);
-    } else {
+    } else if (delay >= -500) {
+      // Only play if we're within 500ms of the start time
       try {
         playerRef.current?.playVideo();
         setHasStartedPlaying(true);
@@ -342,32 +358,29 @@ export function YouTubePlayer({
         clearTimeout(syncTimeoutRef.current);
       }
     };
-  }, [startAt, isReady]);
+  }, [startAt, isReady, isHost]);
 
   // Handle play/pause commands from host
   useEffect(() => {
-    if (!playerRef.current || !isReady) return;
+    if (!playerRef.current || !isReady || playing === undefined) return;
 
-    // For players: Only respond to play/pause after synchronized start has completed
-    // For host: Always respond to play/pause commands
-    if (playing !== undefined) {
-      const now = Date.now();
-      const syncStartCompleted = !startAt || startAt <= now;
+    // For host: always respond to playing prop
+    // For players: only respond after synchronized start has been handled
+    const shouldRespond = isHost || syncStartHandledRef.current;
 
-      if (isHost || syncStartCompleted) {
-        try {
-          if (playing) {
-            playerRef.current.playVideo();
-            setHasStartedPlaying(true);
-          } else if (playing === false) {
-            playerRef.current.pauseVideo();
-          }
-        } catch (error) {
-          console.error('Error controlling playback:', error);
+    if (shouldRespond) {
+      try {
+        if (playing) {
+          playerRef.current.playVideo();
+          setHasStartedPlaying(true);
+        } else {
+          playerRef.current.pauseVideo();
         }
+      } catch (error) {
+        console.error('Error controlling playback:', error);
       }
     }
-  }, [playing, commandAt, isReady, isHost, startAt]);
+  }, [playing, commandAt, isReady, isHost]);
 
   // Handle seek commands from host
   useEffect(() => {
