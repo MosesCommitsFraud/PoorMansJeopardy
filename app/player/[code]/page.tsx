@@ -718,8 +718,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                       videoUrl={gameState.currentQuestion.questionVideoUrl}
                       showTitle={gameState.videoOptions?.showTitle ?? true}
                       mode={gameState.videoOptions?.mode ?? 'full'}
-                      autoplay={true}
-                      startAt={gameState.questionRevealAt}
+                      volume={gameState.videoOptions?.volume ?? 100}
+                      autoplay={false}
+                      startAt={gameState.videoPlayAt}
+                      showControls={true}
                     />
                   </div>
                 )}
@@ -753,8 +755,10 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                         videoUrl={gameState.currentQuestion.answerVideoUrl}
                         showTitle={gameState.videoOptions?.showTitle ?? true}
                         mode={gameState.videoOptions?.mode ?? 'full'}
-                        autoplay={true}
-                        startAt={gameState.answerRevealAt}
+                        volume={gameState.videoOptions?.volume ?? 100}
+                        autoplay={false}
+                        startAt={gameState.videoPlayAt}
+                        showControls={true}
                       />
                     </div>
                   )}

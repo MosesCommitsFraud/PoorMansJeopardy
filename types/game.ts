@@ -15,6 +15,7 @@ export type VideoDisplayMode = 'full' | 'audio-only' | 'muted';
 export interface VideoControlOptions {
   showTitle: boolean;
   mode: VideoDisplayMode;
+  volume: number; // 0-100
 }
 
 export interface Category {
@@ -60,6 +61,7 @@ export interface GameState {
   // Sync timestamps - ensures all clients display content at the same moment
   questionRevealAt?: number; // When to reveal the current question to players
   answerRevealAt?: number; // When to reveal the answer to players
+  videoPlayAt?: number; // When to start video playback for all players
   // Scoring history per question - allows reviewing/modifying after closing
   questionScoring?: Record<string, QuestionScoring>;
   // Video control options for current question/answer

@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Bell, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw, Power, Settings2 } from "lucide-react";
+import { Bell, Trophy, Plus, Minus, XCircle, AlertCircle, Clock, Play, Pause, RotateCcw, Power, Settings2, Volume2, VolumeX } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +51,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
   // Video control states
   const [videoShowTitle, setVideoShowTitle] = useState(true);
   const [videoMode, setVideoMode] = useState<VideoDisplayMode>('full');
+  const [videoVolume, setVideoVolume] = useState(100);
 
   // Keep refs in sync
   useEffect(() => {
@@ -305,7 +307,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
         answerRevealAt: undefined, // Clear any previous answer reveal
         videoOptions: {
           showTitle: videoShowTitle,
-          mode: videoMode
+          mode: videoMode,
+          volume: videoVolume
         }
       });
     }
@@ -313,10 +316,23 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
   const toggleAnswerToPlayers = async () => {
     const willShowAnswer = !gameState?.showAnswerToPlayers;
-    await updateGameState({ 
+    await updateGameState({
       showAnswerToPlayers: willShowAnswer,
       // Set reveal timestamp when showing answer so all clients display at same time
       answerRevealAt: willShowAnswer ? Date.now() + 600 : undefined
+    });
+  };
+
+  const startVideo = async () => {
+    // Set timestamp for synchronized video start across all players
+    const playAt = Date.now() + 600;
+    await updateGameState({
+      videoPlayAt: playAt,
+      videoOptions: {
+        showTitle: videoShowTitle,
+        mode: videoMode,
+        volume: videoVolume
+      }
     });
   };
 
@@ -918,6 +934,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                       videoUrl={selectedQuestion.questionVideoUrl}
                       showTitle={videoShowTitle}
                       mode={videoMode}
+                      showControls={true}
+                      onVolumeChange={setVideoVolume}
                       className="max-h-60"
                     />
                   </div>
@@ -947,6 +965,8 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                         videoUrl={selectedQuestion.answerVideoUrl}
                         showTitle={videoShowTitle}
                         mode={videoMode}
+                        showControls={true}
+                        onVolumeChange={setVideoVolume}
                         className="max-h-60"
                       />
                     </div>
@@ -1043,6 +1063,45 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                           Muted
                         </Button>
                       </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-300 mb-2">Volume for Players</div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setVideoVolume(videoVolume > 0 ? 0 : 100)}
+                          className="text-white hover:text-gray-300 transition-colors"
+                          type="button"
+                        >
+                          {videoVolume === 0 ? (
+                            <VolumeX className="h-4 w-4" />
+                          ) : (
+                            <Volume2 className="h-4 w-4" />
+                          )}
+                        </button>
+                        <Slider
+                          value={[videoVolume]}
+                          onValueChange={(value) => setVideoVolume(value[0])}
+                          max={100}
+                          step={1}
+                          className="flex-1"
+                        />
+                        <span className="text-xs text-white w-10 text-right">{Math.round(videoVolume)}%</span>
+                      </div>
+                    </div>
+                    <div>
+                      <Button
+                        onClick={startVideo}
+                        variant="default"
+                        size="sm"
+                        className="w-full"
+                        disabled={!gameState?.currentQuestion}
+                      >
+                        <Play className="h-3 w-3 mr-2" />
+                        Start Video for All Players
+                      </Button>
+                      <p className="text-xs text-gray-400 mt-1 text-center">
+                        Synchronized start ensures no one has an advantage
+                      </p>
                     </div>
                   </div>
                 </div>
