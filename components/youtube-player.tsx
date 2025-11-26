@@ -560,8 +560,8 @@ export function YouTubePlayer({
         )}
       </div>
 
-      {/* Volume Control - Don't show in muted mode since video is force-muted */}
-      {showControls && mode !== 'muted' && (
+      {/* Volume Control - Show for full and audio-only modes, but not muted mode */}
+      {showControls && (mode === 'full' || mode === 'audio-only') && (
         <div className="mt-3 flex items-center gap-3 px-2">
           <button
             onClick={toggleMute}
