@@ -342,10 +342,10 @@ export function YouTubePlayer({
     const now = Date.now();
     const delay = startAt - now;
 
-    // If synchronized start was too long ago, mark as handled and use fallback
-    if (delay < -1000) {
+    // If synchronized start window has passed, mark as handled and check if we need to play
+    if (delay < -2000) {
       syncStartHandledRef.current = true;
-      // Check if video should be playing (using ref to avoid dependency)
+      // If video should be playing (late arrival), start it now
       if (playingRef.current) {
         try {
           playerRef.current.playVideo();
@@ -373,7 +373,7 @@ export function YouTubePlayer({
         }
       }, delay);
     } else {
-      // Play immediately if we're close to the start time
+      // Play immediately if we're within the sync window
       try {
         playerRef.current?.playVideo();
         setHasStartedPlaying(true);
