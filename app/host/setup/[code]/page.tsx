@@ -569,26 +569,23 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                           </div>
                         )}
                         {question.questionVideoUrl && isYouTubeUrl(question.questionVideoUrl) && (
-                          <div className="mt-2">
-                            <div className="relative border rounded overflow-hidden">
-                              <YouTubePlayer
-                                videoUrl={question.questionVideoUrl}
-                                showTitle={true}
-                                mode="full"
-                                isHost={true}
-                                showPreview={true}
-                                className="max-h-40"
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="destructive"
-                                className="absolute top-2 right-2 z-10"
-                                onClick={() => removeVideo(category.id, question.id, 'question')}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
+                          <div className="mt-2 relative border rounded overflow-hidden">
+                            <YouTubePlayer
+                              videoUrl={question.questionVideoUrl}
+                              showTitle={true}
+                              mode="full"
+                              isHost={true}
+                              showPreview={true}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              className="absolute top-2 right-2 z-10"
+                              onClick={() => removeVideo(category.id, question.id, 'question')}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </div>
                         )}
                       </div>
@@ -632,26 +629,23 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                           </div>
                         )}
                         {question.answerVideoUrl && isYouTubeUrl(question.answerVideoUrl) && (
-                          <div className="mt-2">
-                            <div className="relative border rounded overflow-hidden">
-                              <YouTubePlayer
-                                videoUrl={question.answerVideoUrl}
-                                showTitle={true}
-                                mode="full"
-                                isHost={true}
-                                showPreview={true}
-                                className="max-h-40"
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="destructive"
-                                className="absolute top-2 right-2 z-10"
-                                onClick={() => removeVideo(category.id, question.id, 'answer')}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
+                          <div className="mt-2 relative border rounded overflow-hidden">
+                            <YouTubePlayer
+                              videoUrl={question.answerVideoUrl}
+                              showTitle={true}
+                              mode="full"
+                              isHost={true}
+                              showPreview={true}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="destructive"
+                              className="absolute top-2 right-2 z-10"
+                              onClick={() => removeVideo(category.id, question.id, 'answer')}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </div>
                         )}
                       </div>
