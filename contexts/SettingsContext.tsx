@@ -5,17 +5,24 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 interface Settings {
   soundEnabled: boolean;
   ditherPaused: boolean;
+  buzzerVolume: number; // 0-100
+  videoVolume: number; // 0-100
 }
 
 interface SettingsContextType {
   settings: Settings;
   toggleSound: () => void;
   toggleDither: () => void;
+  setBuzzerVolume: (volume: number) => void;
+  setVideoVolume: (volume: number) => void;
+  updateSettings: (partial: Partial<Settings>) => void; // Easy way to add more settings
 }
 
 const defaultSettings: Settings = {
   soundEnabled: true,
   ditherPaused: false,
+  buzzerVolume: 50, // 50% default
+  videoVolume: 100, // 100% default
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -57,8 +64,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({ ...prev, ditherPaused: !prev.ditherPaused }));
   };
 
+  const setBuzzerVolume = (volume: number) => {
+    setSettings(prev => ({ ...prev, buzzerVolume: Math.max(0, Math.min(100, volume)) }));
+  };
+
+  const setVideoVolume = (volume: number) => {
+    setSettings(prev => ({ ...prev, videoVolume: Math.max(0, Math.min(100, volume)) }));
+  };
+
+  const updateSettings = (partial: Partial<Settings>) => {
+    setSettings(prev => ({ ...prev, ...partial }));
+  };
+
   return (
-    <SettingsContext.Provider value={{ settings, toggleSound, toggleDither }}>
+    <SettingsContext.Provider value={{
+      settings,
+      toggleSound,
+      toggleDither,
+      setBuzzerVolume,
+      setVideoVolume,
+      updateSettings
+    }}>
       {children}
     </SettingsContext.Provider>
   );

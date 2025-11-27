@@ -25,6 +25,7 @@ import { useHostPeerSync } from "@/hooks/usePeerSync";
 import { Wifi, WifiOff } from "lucide-react";
 import { LobbyControlsDialog } from "@/components/LobbyControls";
 import { YouTubePlayer } from "@/components/youtube-player";
+import { GameSettingsPanel } from "@/components/GameSettingsPanel";
 
 export default function HostGame({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -798,6 +799,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               </Badge>
             </div>
             <div className="flex gap-2">
+              <GameSettingsPanel showBuzzerVolume={false} showVideoVolume={true} />
               <LobbyControlsDialog
                 players={gameState.players}
                 hostId={localStorage.getItem("jeopardy_host_id") || ""}
@@ -1003,6 +1005,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                       videoUrl={selectedQuestion.questionVideoUrl}
                       showTitle={videoShowTitle}
                       mode={videoMode}
+                      volume={settings.videoVolume}
                       showControls={true}
                       isHost={true}
                       playing={gameState?.videoPlaying}
@@ -1036,6 +1039,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                         videoUrl={selectedQuestion.answerVideoUrl}
                         showTitle={videoShowTitle}
                         mode={videoMode}
+                        volume={settings.videoVolume}
                         showControls={true}
                         isHost={true}
                         playing={gameState?.videoPlaying}

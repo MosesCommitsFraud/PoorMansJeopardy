@@ -23,6 +23,7 @@ import { useSettings } from "@/contexts/SettingsContext";
 import { usePlayerPeerSync } from "@/hooks/usePeerSync";
 import { Wifi, WifiOff } from "lucide-react";
 import { YouTubePlayer } from "@/components/youtube-player";
+import { GameSettingsPanel } from "@/components/GameSettingsPanel";
 
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -210,7 +211,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
 
     try {
       const audio = new Audio('/buzzer.mp3');
-      audio.volume = 0.5; // 50% volume
+      audio.volume = settings.buzzerVolume / 100; // Convert 0-100 to 0-1
       audio.play().catch(error => {
         console.log("Audio playback failed (may need user interaction):", error);
       });
@@ -449,10 +450,13 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
               {isPeerConnected ? "Live" : "..."}
             </Badge>
           </div>
-          <Button onClick={leaveGame} variant="destructive" size="sm">
-            <LogOut className="mr-2 h-4 w-4" />
-            Leave
-          </Button>
+          <div className="flex items-center gap-2">
+            <GameSettingsPanel showBuzzerVolume={true} showVideoVolume={true} />
+            <Button onClick={leaveGame} variant="destructive" size="sm">
+              <LogOut className="mr-2 h-4 w-4" />
+              Leave
+            </Button>
+          </div>
         </div>
 
         {/* Compact Buzzer Banner */}
@@ -718,7 +722,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                       videoUrl={gameState.currentQuestion.questionVideoUrl}
                       showTitle={gameState.videoOptions?.showTitle ?? true}
                       mode={gameState.videoOptions?.mode ?? 'full'}
-                      volume={gameState.videoOptions?.volume ?? 100}
+                      volume={settings.videoVolume}
                       startAt={gameState.videoPlayAt}
                       showControls={true}
                       isHost={false}
@@ -758,7 +762,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                         videoUrl={gameState.currentQuestion.answerVideoUrl}
                         showTitle={gameState.videoOptions?.showTitle ?? true}
                         mode={gameState.videoOptions?.mode ?? 'full'}
-                        volume={gameState.videoOptions?.volume ?? 100}
+                        volume={settings.videoVolume}
                         startAt={gameState.videoPlayAt}
                         showControls={true}
                         isHost={false}
