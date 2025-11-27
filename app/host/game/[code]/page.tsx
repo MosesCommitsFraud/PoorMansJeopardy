@@ -966,7 +966,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
       {/* Question Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && dismissQuestion()}>
-        <DialogContent className="max-w-5xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center justify-between">
               <span>Question Worth: ${selectedQuestion?.value}</span>
