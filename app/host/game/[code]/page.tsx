@@ -966,7 +966,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
       {/* Question Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && dismissQuestion()}>
-        <DialogContent className="max-w-5xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
+        <DialogContent className="max-w-7xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center justify-between">
               <span>Question Worth: ${selectedQuestion?.value}</span>
@@ -975,10 +975,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               </Badge>
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
             {/* Left Column - Question & Controls */}
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
               <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-4 rounded-lg">
                 <div className="text-sm font-semibold text-gray-300 mb-2">QUESTION:</div>
                 <div className={`font-bold break-words ${
@@ -1052,42 +1052,40 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               {/* Timer Controls */}
               <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-3 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <Clock className="h-4 w-4" />
-                    <span className="font-semibold text-sm">Timer</span>
+                    <span className="font-semibold text-xs">Timer</span>
                   </div>
                   {gameState?.timerEndAt && (
-                    <div className={`text-2xl font-bold tabular-nums ${
+                    <div className={`text-xl font-bold tabular-nums ${
                       currentTime <= 5 ? 'text-red-500 animate-pulse' : 'text-white'
                     }`}>
                       {Math.floor(currentTime / 60)}:{(currentTime % 60).toString().padStart(2, '0')}
                     </div>
                   )}
                 </div>
-                <div className="flex gap-2 items-center">
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      value={timerDuration}
-                      onChange={(e) => setTimerDuration(Math.max(1, parseInt(e.target.value) || 1))}
-                      onBlur={() => setTimerDurationInState(timerDuration)}
-                      className="w-16 h-8 text-sm"
-                      min="1"
-                      max="999"
-                    />
-                    <span className="text-xs text-muted-foreground">sec</span>
-                  </div>
+                <div className="flex gap-1 items-center">
+                  <Input
+                    type="number"
+                    value={timerDuration}
+                    onChange={(e) => setTimerDuration(Math.max(1, parseInt(e.target.value) || 1))}
+                    onBlur={() => setTimerDurationInState(timerDuration)}
+                    className="w-14 h-7 text-xs px-2"
+                    min="1"
+                    max="999"
+                  />
+                  <span className="text-[10px] text-muted-foreground">sec</span>
                   <div className="flex gap-1 ml-auto">
                     {!gameState?.timerEndAt ? (
-                      <Button onClick={startTimer} size="sm" variant="outline" className="h-8 px-2">
+                      <Button onClick={startTimer} size="sm" variant="outline" className="h-7 px-2">
                         <Play className="h-3 w-3" />
                       </Button>
                     ) : (
-                      <Button onClick={stopTimer} size="sm" variant="outline" className="h-8 px-2">
+                      <Button onClick={stopTimer} size="sm" variant="outline" className="h-7 px-2">
                         <Pause className="h-3 w-3" />
                       </Button>
                     )}
-                    <Button onClick={resetTimer} size="sm" variant="outline" className="h-8 px-2">
+                    <Button onClick={resetTimer} size="sm" variant="outline" className="h-7 px-2">
                       <RotateCcw className="h-3 w-3" />
                     </Button>
                   </div>
@@ -1097,10 +1095,10 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
               {/* Video Controls - only show if question or answer has a video */}
               {(selectedQuestion?.questionVideoUrl || selectedQuestion?.answerVideoUrl) && (
                 <div className="bg-gray-700/20 backdrop-blur-sm border border-gray-600/30 p-3 rounded-lg">
-                  <div className="text-sm font-semibold text-gray-300 mb-3">Video Controls</div>
-                  <div className="space-y-3">
+                  <div className="text-sm font-semibold text-gray-300 mb-2">Video Controls</div>
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-300">Show Video Title</span>
+                      <span className="text-xs text-gray-300">Show Title</span>
                       <Button
                         onClick={() => {
                           const newValue = !videoShowTitle;
@@ -1109,14 +1107,14 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                         }}
                         variant={videoShowTitle ? "default" : "outline"}
                         size="sm"
-                        className="h-7 px-3 text-xs"
+                        className="h-7 px-2 text-xs"
                       >
-                        {videoShowTitle ? "Visible" : "Hidden"}
+                        {videoShowTitle ? "On" : "Off"}
                       </Button>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-300 mb-2">Display Mode</div>
-                      <div className="flex gap-2">
+                      <div className="text-xs text-gray-300 mb-1">Display Mode</div>
+                      <div className="flex gap-1">
                         <Button
                           onClick={() => {
                             setVideoMode('full');
@@ -1124,7 +1122,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                           }}
                           variant={videoMode === 'full' ? "default" : "outline"}
                           size="sm"
-                          className="flex-1 h-8 text-xs"
+                          className="flex-1 h-7 text-xs"
                         >
                           Full
                         </Button>
@@ -1135,9 +1133,9 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                           }}
                           variant={videoMode === 'audio-only' ? "default" : "outline"}
                           size="sm"
-                          className="flex-1 h-8 text-xs"
+                          className="flex-1 h-7 text-xs"
                         >
-                          Audio Only
+                          Audio
                         </Button>
                         <Button
                           onClick={() => {
@@ -1146,20 +1144,20 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                           }}
                           variant={videoMode === 'muted' ? "default" : "outline"}
                           size="sm"
-                          className="flex-1 h-8 text-xs"
+                          className="flex-1 h-7 text-xs"
                         >
                           Muted
                         </Button>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <div className="text-xs text-gray-300 mb-2">Playback Controls</div>
-                      <div className="flex gap-2">
+                    <div>
+                      <div className="text-xs text-gray-300 mb-1">Playback</div>
+                      <div className="flex gap-1">
                         <Button
                           onClick={toggleVideoPlayback}
                           variant="outline"
                           size="sm"
-                          className="flex-1"
+                          className="flex-1 h-7 text-xs"
                         >
                           {gameState?.videoPlaying ? (
                             <>
@@ -1177,14 +1175,12 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                           onClick={restartVideo}
                           variant="outline"
                           size="sm"
-                          title="Restart video (from timestamp if present)"
+                          className="h-7 px-2"
+                          title="Restart video"
                         >
                           <RotateCcw className="h-3 w-3" />
                         </Button>
                       </div>
-                      <p className="text-xs text-gray-400 text-center">
-                        Controls are synchronized across all players
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -1224,7 +1220,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
             </div>
             
             {/* Right Column - Buzzer Queue with Scoring */}
-            <div className="w-72 flex-shrink-0 overflow-y-auto border-l border-white/10 pl-4">
+            <div className="w-64 flex-shrink-0 overflow-y-auto border-l border-white/10 pl-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Bell className="h-5 w-5 text-yellow-400" />
