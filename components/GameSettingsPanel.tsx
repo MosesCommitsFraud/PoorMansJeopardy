@@ -8,7 +8,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -28,14 +27,13 @@ export function GameSettingsPanel({
   const [open, setOpen] = useState(false);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Settings className="h-4 w-4 mr-2" />
-          Settings
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Settings className="h-4 w-4 mr-2" />
+        Settings
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Game Settings</DialogTitle>
           <DialogDescription>
@@ -106,5 +104,6 @@ export function GameSettingsPanel({
         </div>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
