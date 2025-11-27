@@ -26,6 +26,20 @@ export function GameSettingsPanel({
   const { settings, setBuzzerVolume, setVideoVolume } = useSettings();
   const [open, setOpen] = useState(false);
 
+  const testBuzzerSound = () => {
+    if (settings.buzzerVolume === 0) return; // Don't play if muted
+
+    try {
+      const audio = new Audio('/buzzer.mp3');
+      audio.volume = settings.buzzerVolume / 100;
+      audio.play().catch(error => {
+        console.log("Audio playback failed:", error);
+      });
+    } catch (error) {
+      console.log("Audio not available:", error);
+    }
+  };
+
   return (
     <>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
@@ -47,9 +61,20 @@ export function GameSettingsPanel({
                 <Label htmlFor="buzzer-volume" className="text-sm font-medium">
                   Buzzer Volume
                 </Label>
-                <span className="text-sm text-muted-foreground">
-                  {settings.buzzerVolume}%
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {settings.buzzerVolume}%
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={testBuzzerSound}
+                    className="h-6 px-2 text-xs"
+                  >
+                    Test
+                  </Button>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <VolumeX className="h-4 w-4 text-muted-foreground" />

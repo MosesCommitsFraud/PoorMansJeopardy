@@ -315,7 +315,7 @@ export function YouTubePlayer({
     }
   }, [mode, isReady]);
 
-  // Handle volume prop changes (from host)
+  // Handle volume prop changes
   useEffect(() => {
     if (!playerRef.current || !isReady) return;
 
@@ -325,14 +325,14 @@ export function YouTubePlayer({
       if (initialVolume === 0) {
         playerRef.current.mute();
         setIsMuted(true);
-      } else if (isMuted && mode !== 'muted') {
+      } else if (mode !== 'muted') {
         playerRef.current.unMute();
         setIsMuted(false);
       }
     } catch (error) {
       console.error('Error updating volume:', error);
     }
-  }, [initialVolume, isReady]);
+  }, [initialVolume, isReady, mode]);
 
   // Handle synchronized playback start (only for players, not host)
   useEffect(() => {

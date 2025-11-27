@@ -21,7 +21,7 @@ interface SettingsContextType {
 const defaultSettings: Settings = {
   soundEnabled: true,
   ditherPaused: false,
-  buzzerVolume: 50, // 50% default
+  buzzerVolume: 30, // 30% default - user can adjust freely
   videoVolume: 100, // 100% default
 };
 

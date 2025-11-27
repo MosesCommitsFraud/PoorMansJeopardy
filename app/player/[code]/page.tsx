@@ -207,7 +207,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
   };
 
   const playBuzzerSound = () => {
-    if (!settings.soundEnabled) return;
+    if (!settings.soundEnabled || settings.buzzerVolume === 0) return;
 
     try {
       const audio = new Audio('/buzzer.mp3');
