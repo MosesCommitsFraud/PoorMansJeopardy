@@ -966,7 +966,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
       {/* Question Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && dismissQuestion()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center justify-between">
               <span>Question Worth: ${selectedQuestion?.value}</span>
@@ -998,7 +998,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   </div>
                 )}
                 {selectedQuestion?.questionVideoUrl && (
-                  <div className="mt-3 max-h-32 overflow-hidden">
+                  <div className="mt-3 h-24 overflow-hidden">
                     <YouTubePlayer
                       videoUrl={selectedQuestion.questionVideoUrl}
                       showTitle={videoShowTitle}
@@ -1031,7 +1031,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     </div>
                   )}
                   {selectedQuestion?.answerVideoUrl && (
-                    <div className="mt-3 max-h-32 overflow-hidden">
+                    <div className="mt-3 h-24 overflow-hidden">
                       <YouTubePlayer
                         videoUrl={selectedQuestion.answerVideoUrl}
                         showTitle={videoShowTitle}
