@@ -479,8 +479,8 @@ export function YouTubePlayer({
   }
 
   return (
-    <div className={`relative ${className}`}>
-      <div className="aspect-video w-full bg-black rounded-lg overflow-hidden relative">
+    <div className={`relative w-full ${className}`}>
+      <div className="aspect-video w-full max-w-full bg-black rounded-lg overflow-hidden relative">
         <div
           id={playerIdRef.current}
           ref={playerContainerRef}
