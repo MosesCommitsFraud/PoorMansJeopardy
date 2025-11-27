@@ -966,7 +966,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
 
       {/* Question Dialog */}
       <Dialog open={!!selectedQuestion} onOpenChange={(open) => !open && dismissQuestion()}>
-        <DialogContent className="max-w-6xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
+        <DialogContent className="max-w-5xl max-h-[90vh] border border-white/20 bg-black/30 backdrop-blur-xl flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center justify-between">
               <span>Question Worth: ${selectedQuestion?.value}</span>
@@ -998,7 +998,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   </div>
                 )}
                 {selectedQuestion?.questionVideoUrl && (
-                  <div className="mt-3 max-h-48">
+                  <div className="mt-3 h-32 overflow-hidden">
                     <YouTubePlayer
                       videoUrl={selectedQuestion.questionVideoUrl}
                       showTitle={videoShowTitle}
@@ -1031,7 +1031,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     </div>
                   )}
                   {selectedQuestion?.answerVideoUrl && (
-                    <div className="mt-3 max-h-48">
+                    <div className="mt-3 h-32 overflow-hidden">
                       <YouTubePlayer
                         videoUrl={selectedQuestion.answerVideoUrl}
                         showTitle={videoShowTitle}
@@ -1218,7 +1218,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
             </div>
             
             {/* Right Column - Buzzer Queue with Scoring */}
-            <div className="w-80 flex-shrink-0 overflow-y-auto border-l border-white/10 pl-4">
+            <div className="w-72 flex-shrink-0 overflow-y-auto border-l border-white/10 pl-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Bell className="h-5 w-5 text-yellow-400" />
