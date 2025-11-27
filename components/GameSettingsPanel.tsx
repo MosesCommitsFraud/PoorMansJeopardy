@@ -30,8 +30,9 @@ export function GameSettingsPanel({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon">
-          <Settings className="h-4 w-4" />
+        <Button variant="outline" size="sm">
+          <Settings className="h-4 w-4 mr-2" />
+          Settings
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
