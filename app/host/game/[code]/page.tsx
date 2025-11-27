@@ -998,7 +998,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   </div>
                 )}
                 {selectedQuestion?.questionVideoUrl && (
-                  <div className="mt-3 h-32 overflow-hidden">
+                  <div className="mt-3 max-h-40">
                     <YouTubePlayer
                       videoUrl={selectedQuestion.questionVideoUrl}
                       showTitle={videoShowTitle}
@@ -1031,7 +1031,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                     </div>
                   )}
                   {selectedQuestion?.answerVideoUrl && (
-                    <div className="mt-3 h-32 overflow-hidden">
+                    <div className="mt-3 max-h-40">
                       <YouTubePlayer
                         videoUrl={selectedQuestion.answerVideoUrl}
                         showTitle={videoShowTitle}
