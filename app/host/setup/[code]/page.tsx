@@ -361,9 +361,6 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
     // Auto-detect URLs - check each line
     const lines = value.split('\n');
-    let foundVideoUrl = false;
-    let foundImageUrl = false;
-
     for (const line of lines) {
       const trimmedLine = line.trim();
       if (trimmedLine) {
@@ -371,27 +368,15 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
         if (isYouTubeUrl(trimmedLine)) {
           const videoField = field === 'question' ? 'questionVideoUrl' : 'answerVideoUrl';
           updateQuestion(categoryId, questionId, videoField, trimmedLine);
-          foundVideoUrl = true;
           break; // Use first valid URL found
         }
         // Check for image URL
         else if (isImageUrl(trimmedLine)) {
           const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
           updateQuestion(categoryId, questionId, imageField, trimmedLine);
-          foundImageUrl = true;
           break; // Use first valid URL found
         }
       }
-    }
-
-    // Clear video/image if no valid URL was found in the text
-    if (!foundVideoUrl) {
-      const videoField = field === 'question' ? 'questionVideoUrl' : 'answerVideoUrl';
-      updateQuestion(categoryId, questionId, videoField, '');
-    }
-    if (!foundImageUrl) {
-      const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
-      updateQuestion(categoryId, questionId, imageField, '');
     }
   };
 
