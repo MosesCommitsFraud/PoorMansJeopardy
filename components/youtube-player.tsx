@@ -19,6 +19,7 @@ interface YouTubePlayerProps {
   playing?: boolean; // Controlled playback state from host
   seekTo?: number; // Seek position from host (in seconds)
   commandAt?: number; // Timestamp of last playback command
+  showPreview?: boolean; // Show thumbnail preview without blocking overlay (for setup)
 }
 
 // Format time in MM:SS or HH:MM:SS format
@@ -133,6 +134,7 @@ export function YouTubePlayer({
   playing,
   seekTo,
   commandAt,
+  showPreview = false,
 }: YouTubePlayerProps) {
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
@@ -500,7 +502,7 @@ export function YouTubePlayer({
           </div>
         </div>
         {/* Thumbnail blocker - hides video thumbnail until playback starts */}
-        {!hasStartedPlaying && (
+        {!showPreview && !hasStartedPlaying && (
           <div className="absolute inset-0 bg-black z-30 flex items-center justify-center">
             <div className="text-white text-center">
               <svg
