@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X, Video } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X } from "lucide-react";
 import { Category, Question, GameTemplate } from "@/types/game";
 import { templateStorage } from "@/lib/template-storage";
 import { CategoryBrowser } from "@/components/category-browser";
@@ -314,11 +314,6 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     updateQuestion(categoryId, questionId, field, '');
   };
 
-  const handleVideoUrlChange = (categoryId: string, questionId: string, type: 'question' | 'answer', url: string) => {
-    const field = type === 'question' ? 'questionVideoUrl' : 'answerVideoUrl';
-    updateQuestion(categoryId, questionId, field, url);
-  };
-
   const removeVideo = (categoryId: string, questionId: string, type: 'question' | 'answer') => {
     const field = type === 'question' ? 'questionVideoUrl' : 'answerVideoUrl';
     updateQuestion(categoryId, questionId, field, '');
@@ -360,18 +355,27 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     return false;
   };
 
-  // Handle text change with auto image detection
+  // Handle text change with auto image and video detection
   const handleTextChange = (categoryId: string, questionId: string, field: 'question' | 'answer', value: string) => {
     updateQuestion(categoryId, questionId, field, value);
-    
-    // Auto-detect image URLs - check each line
+
+    // Auto-detect URLs - check each line
     const lines = value.split('\n');
     for (const line of lines) {
       const trimmedLine = line.trim();
-      if (trimmedLine && isImageUrl(trimmedLine)) {
-        const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
-        updateQuestion(categoryId, questionId, imageField, trimmedLine);
-        break; // Use first valid URL found
+      if (trimmedLine) {
+        // Check for YouTube URL first
+        if (isYouTubeUrl(trimmedLine)) {
+          const videoField = field === 'question' ? 'questionVideoUrl' : 'answerVideoUrl';
+          updateQuestion(categoryId, questionId, videoField, trimmedLine);
+          break; // Use first valid URL found
+        }
+        // Check for image URL
+        else if (isImageUrl(trimmedLine)) {
+          const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
+          updateQuestion(categoryId, questionId, imageField, trimmedLine);
+          break; // Use first valid URL found
+        }
       }
     }
   };
@@ -543,7 +547,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                           value={question.question}
                           onChange={(e) => handleTextChange(category.id, question.id, "question", e.target.value)}
                           onPaste={(e) => handlePaste(e, category.id, question.id, "question")}
-                          placeholder="Enter question, paste image URL, or paste image from clipboard..."
+                          placeholder="Enter question, paste image/YouTube URL, or paste image from clipboard..."
                           className="min-h-[80px]"
                         />
                         {question.questionImageUrl && (
@@ -564,20 +568,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                             </Button>
                           </div>
                         )}
-                        <div className="mt-2">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Video className="h-3 w-3" />
-                            <Label className="text-xs">YouTube Video URL</Label>
-                          </div>
-                          <Input
-                            type="text"
-                            value={question.questionVideoUrl || ''}
-                            onChange={(e) => handleVideoUrlChange(category.id, question.id, 'question', e.target.value)}
-                            placeholder="https://youtube.com/watch?v=..."
-                            className="text-sm"
-                          />
-                          {question.questionVideoUrl && isYouTubeUrl(question.questionVideoUrl) && (
-                            <div className="mt-2 relative border rounded overflow-hidden">
+                        {question.questionVideoUrl && isYouTubeUrl(question.questionVideoUrl) && (
+                          <div className="mt-2">
+                            <div className="relative border rounded overflow-hidden">
                               <YouTubePlayer
                                 videoUrl={question.questionVideoUrl}
                                 showTitle={true}
@@ -595,13 +588,8 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                                 <X className="h-4 w-4" />
                               </Button>
                             </div>
-                          )}
-                          {question.questionVideoUrl && !isYouTubeUrl(question.questionVideoUrl) && (
-                            <div className="mt-1 text-xs text-red-500">
-                              Invalid YouTube URL
-                            </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                       <div className="col-span-6">
                         <div className="flex items-center justify-between mb-1">
@@ -621,7 +609,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                           value={question.answer}
                           onChange={(e) => handleTextChange(category.id, question.id, "answer", e.target.value)}
                           onPaste={(e) => handlePaste(e, category.id, question.id, "answer")}
-                          placeholder="Enter answer, paste image URL, or paste image from clipboard..."
+                          placeholder="Enter answer, paste image/YouTube URL, or paste image from clipboard..."
                           className="min-h-[80px]"
                         />
                         {question.answerImageUrl && (
@@ -642,20 +630,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                             </Button>
                           </div>
                         )}
-                        <div className="mt-2">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Video className="h-3 w-3" />
-                            <Label className="text-xs">YouTube Video URL</Label>
-                          </div>
-                          <Input
-                            type="text"
-                            value={question.answerVideoUrl || ''}
-                            onChange={(e) => handleVideoUrlChange(category.id, question.id, 'answer', e.target.value)}
-                            placeholder="https://youtube.com/watch?v=..."
-                            className="text-sm"
-                          />
-                          {question.answerVideoUrl && isYouTubeUrl(question.answerVideoUrl) && (
-                            <div className="mt-2 relative border rounded overflow-hidden">
+                        {question.answerVideoUrl && isYouTubeUrl(question.answerVideoUrl) && (
+                          <div className="mt-2">
+                            <div className="relative border rounded overflow-hidden">
                               <YouTubePlayer
                                 videoUrl={question.answerVideoUrl}
                                 showTitle={true}
@@ -673,13 +650,8 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                                 <X className="h-4 w-4" />
                               </Button>
                             </div>
-                          )}
-                          {question.answerVideoUrl && !isYouTubeUrl(question.answerVideoUrl) && (
-                            <div className="mt-1 text-xs text-red-500">
-                              Invalid YouTube URL
-                            </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
