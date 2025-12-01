@@ -25,6 +25,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",
+    "lz-string": "^1.5.0",
     "nanoid": "^5.0.9",
     "next": "^16.0.0",
     "partysocket": "^1.1.6",

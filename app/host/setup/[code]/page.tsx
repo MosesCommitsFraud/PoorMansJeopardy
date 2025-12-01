@@ -17,6 +17,7 @@ import { CategoryBrowser } from "@/components/category-browser";
 import { generateCategoriesFromDataset } from "@/lib/questions-loader";
 import { GifPicker } from "@/components/gif-picker";
 import { YouTubePlayer, isYouTubeUrl } from "@/components/youtube-player";
+import { compressData } from "@/lib/compression";
 
 export default function HostSetup({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -244,10 +245,23 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
       gameState.categories = categories;
 
+      // Compress data if it's large (>5MB)
+      let payload;
+      if (sizeMB > 5) {
+        const compressed = compressData(gameState);
+        payload = {
+          compressed: true,
+          data: compressed
+        };
+        console.log(`Compressed ${sizeMB.toFixed(1)}MB to ${(compressed.length / (1024 * 1024)).toFixed(1)}MB`);
+      } else {
+        payload = { gameState };
+      }
+
       const saveResponse = await fetch(`/api/lobby/${resolvedParams.code}/state`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ gameState }),
+        body: JSON.stringify(payload),
       });
 
       if (!saveResponse.ok) {
@@ -291,7 +305,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     if (sizeMB > 50) {
       const proceed = confirm(
         `This template is quite large (${sizeMB.toFixed(1)} MB). ` +
-        `Saving may take a moment. Continue?`
+        `Saving to IndexedDB may take a moment. Continue?`
       );
       if (!proceed) return;
     }
@@ -303,6 +317,11 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       await loadStorageInfo();
       setShowSaveDialog(false);
       setTemplateName("");
+
+      // Show success message with size info if large
+      if (sizeMB > 10) {
+        alert(`Template saved successfully! (${sizeMB.toFixed(1)} MB stored in IndexedDB)`);
+      }
     } catch (error) {
       console.error("Error saving template:", error);
       alert("Failed to save template. The template might be too large or you may be out of storage space.");
@@ -490,35 +509,34 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col gap-3 mb-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="bg-card/60 backdrop-blur-md border border-border px-6 py-3 rounded-lg">
-                <h1 className="text-2xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>Setup</h1>
-              </div>
-              <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
-                {resolvedParams.code}
-              </Badge>
-              {storageInfo && (
-                <Badge
-                  variant="outline"
-                  className={`px-3 py-1 text-sm backdrop-blur-md flex items-center gap-1.5 ${
-                    storageInfo.percentUsed > 80 ? 'border-yellow-500/50 text-yellow-500' :
-                    storageInfo.percentUsed > 95 ? 'border-red-500/50 text-red-500' : ''
-                  }`}
-                >
-                  <HardDrive className="h-3 w-3" />
-                  {(storageInfo.usedMB / 1024).toFixed(2)} / {(storageInfo.quotaMB / 1024).toFixed(1)} GB
-                </Badge>
-              )}
+        <div className="flex justify-between items-center mb-4 gap-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-card/60 backdrop-blur-md border border-border px-6 py-3 rounded-lg">
+              <h1 className="text-2xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>Setup</h1>
             </div>
+            <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
+              {resolvedParams.code}
+            </Badge>
+            {storageInfo && (
+              <Badge
+                variant="outline"
+                className={`px-3 py-1 text-sm backdrop-blur-md flex items-center gap-1.5 ${
+                  storageInfo.percentUsed > 80 ? 'border-yellow-500/50 text-yellow-500' :
+                  storageInfo.percentUsed > 95 ? 'border-red-500/50 text-red-500' : ''
+                }`}
+              >
+                <HardDrive className="h-3 w-3" />
+                {(storageInfo.usedMB / 1024).toFixed(2)} / {(storageInfo.quotaMB / 1024).toFixed(1)} GB
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
             <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline" size="sm">
               <ArrowLeft className="mr-1 h-3 w-3" />
               Lobby
             </Button>
-          </div>
 
-          <div className="flex gap-2 flex-wrap">
             {/* Template Actions */}
             {templates.length > 0 && (
               <Select onValueChange={loadTemplate}>
