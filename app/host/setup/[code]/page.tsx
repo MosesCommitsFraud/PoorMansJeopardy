@@ -53,6 +53,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     quotaMB: number;
     percentUsed: number;
   } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadGameState();
@@ -63,6 +64,16 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   const loadStorageInfo = async () => {
     const info = await templateStorage.getStorageInfo();
     setStorageInfo(info);
+  };
+
+  // Estimate size of current categories in MB
+  const estimateTemplateSize = (): number => {
+    try {
+      const jsonString = JSON.stringify(categories);
+      return new Blob([jsonString]).size / (1024 * 1024);
+    } catch {
+      return 0;
+    }
   };
 
   const loadTemplates = async () => {
@@ -216,21 +227,38 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       return;
     }
 
+    // Warn if data is very large
+    const sizeMB = estimateTemplateSize();
+    if (sizeMB > 50) {
+      const proceed = confirm(
+        `This game has a lot of data (${sizeMB.toFixed(1)} MB). ` +
+        `Saving may take a moment. Continue?`
+      );
+      if (!proceed) return;
+    }
+
+    setIsSaving(true);
     try {
       const response = await fetch(`/api/lobby/${resolvedParams.code}/state`);
       const gameState = await response.json();
-      
+
       gameState.categories = categories;
-      
-      await fetch(`/api/lobby/${resolvedParams.code}/state`, {
+
+      const saveResponse = await fetch(`/api/lobby/${resolvedParams.code}/state`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gameState }),
       });
-      
+
+      if (!saveResponse.ok) {
+        throw new Error(`Server returned ${saveResponse.status}`);
+      }
+
       router.push(`/lobby/${resolvedParams.code}`);
     } catch (error) {
-      alert("Failed to save game");
+      console.error("Error saving game:", error);
+      alert("Failed to save game. The data might be too large for the server to handle.");
+      setIsSaving(false);
     }
   };
 
@@ -258,11 +286,29 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       return;
     }
 
-    await templateStorage.save(templateName.trim(), categories, editingTemplateId || undefined);
-    await loadTemplates();
-    await loadStorageInfo();
-    setShowSaveDialog(false);
-    setTemplateName("");
+    // Warn if template is very large
+    const sizeMB = estimateTemplateSize();
+    if (sizeMB > 50) {
+      const proceed = confirm(
+        `This template is quite large (${sizeMB.toFixed(1)} MB). ` +
+        `Saving may take a moment. Continue?`
+      );
+      if (!proceed) return;
+    }
+
+    setIsSaving(true);
+    try {
+      await templateStorage.save(templateName.trim(), categories, editingTemplateId || undefined);
+      await loadTemplates();
+      await loadStorageInfo();
+      setShowSaveDialog(false);
+      setTemplateName("");
+    } catch (error) {
+      console.error("Error saving template:", error);
+      alert("Failed to save template. The template might be too large or you may be out of storage space.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const loadTemplate = async (templateId: string) => {
@@ -518,9 +564,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
               Add Category
             </Button>
 
-            <Button onClick={saveGame} size="sm">
+            <Button onClick={saveGame} size="sm" disabled={isSaving}>
               <Save className="mr-1 h-3 w-3" />
-              Save
+              {isSaving ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>
@@ -707,18 +753,18 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                 onChange={(e) => setTemplateName(e.target.value)}
                 placeholder="e.g., History Quiz, Science Trivia..."
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") saveAsTemplate();
+                  if (e.key === "Enter" && !isSaving) saveAsTemplate();
                 }}
                 autoFocus
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+            <Button variant="outline" onClick={() => setShowSaveDialog(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={saveAsTemplate}>
-              {editingTemplateId ? "Rename" : "Save Template"}
+            <Button onClick={saveAsTemplate} disabled={isSaving}>
+              {isSaving ? "Saving..." : editingTemplateId ? "Rename" : "Save Template"}
             </Button>
           </DialogFooter>
         </DialogContent>
