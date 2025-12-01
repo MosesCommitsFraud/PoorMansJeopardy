@@ -490,33 +490,35 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-card/60 backdrop-blur-md border border-border px-6 py-3 rounded-lg">
-              <h1 className="text-2xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>Setup</h1>
-            </div>
-            <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
-              {resolvedParams.code}
-            </Badge>
-            {storageInfo && (
-              <Badge
-                variant="outline"
-                className={`px-3 py-1 text-sm backdrop-blur-md flex items-center gap-1.5 ${
-                  storageInfo.percentUsed > 80 ? 'border-yellow-500/50 text-yellow-500' :
-                  storageInfo.percentUsed > 95 ? 'border-red-500/50 text-red-500' : ''
-                }`}
-              >
-                <HardDrive className="h-3 w-3" />
-                {storageInfo.usedMB.toFixed(1)} / {storageInfo.quotaMB.toFixed(0)} MB
+        <div className="flex flex-col gap-3 mb-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="bg-card/60 backdrop-blur-md border border-border px-6 py-3 rounded-lg">
+                <h1 className="text-2xl font-bold text-white" style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>Setup</h1>
+              </div>
+              <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
+                {resolvedParams.code}
               </Badge>
-            )}
-          </div>
-          <div className="flex gap-2 flex-wrap">
+              {storageInfo && (
+                <Badge
+                  variant="outline"
+                  className={`px-3 py-1 text-sm backdrop-blur-md flex items-center gap-1.5 ${
+                    storageInfo.percentUsed > 80 ? 'border-yellow-500/50 text-yellow-500' :
+                    storageInfo.percentUsed > 95 ? 'border-red-500/50 text-red-500' : ''
+                  }`}
+                >
+                  <HardDrive className="h-3 w-3" />
+                  {(storageInfo.usedMB / 1024).toFixed(2)} / {(storageInfo.quotaMB / 1024).toFixed(1)} GB
+                </Badge>
+              )}
+            </div>
             <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline" size="sm">
               <ArrowLeft className="mr-1 h-3 w-3" />
-              Back to Lobby
+              Lobby
             </Button>
-            
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
             {/* Template Actions */}
             {templates.length > 0 && (
               <Select onValueChange={loadTemplate}>
@@ -532,12 +534,12 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                 </SelectContent>
               </Select>
             )}
-            
+
             <Button onClick={openSaveTemplateDialog} variant="outline" size="sm">
               <BookTemplate className="mr-1 h-3 w-3" />
               Save Template
             </Button>
-            
+
             {templates.length > 0 && (
               <Button onClick={() => setShowManageDialog(true)} variant="outline" size="sm">
                 <FolderOpen className="mr-1 h-3 w-3" />
