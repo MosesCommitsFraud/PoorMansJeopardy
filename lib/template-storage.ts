@@ -1,18 +1,54 @@
 import { GameTemplate, Category } from "@/types/game";
+import { indexedDBStorage } from "./indexed-db-storage";
 
 const TEMPLATES_KEY = "jeopardy_game_templates";
+
+/**
+ * Migrate templates from localStorage to IndexedDB (one-time operation)
+ */
+async function migrateFromLocalStorage(): Promise<void> {
+  if (typeof window === "undefined") return;
+
+  try {
+    // Check if migration has already been done
+    const migrated = localStorage.getItem("jeopardy_templates_migrated");
+    if (migrated === "true") return;
+
+    // Get templates from localStorage
+    const stored = localStorage.getItem(TEMPLATES_KEY);
+    if (stored) {
+      const templates: GameTemplate[] = JSON.parse(stored);
+
+      // Save each template to IndexedDB
+      for (const template of templates) {
+        await indexedDBStorage.save(template);
+      }
+
+      console.log(`Migrated ${templates.length} templates from localStorage to IndexedDB`);
+    }
+
+    // Mark migration as complete
+    localStorage.setItem("jeopardy_templates_migrated", "true");
+
+    // Optionally remove old data to free up localStorage space
+    localStorage.removeItem(TEMPLATES_KEY);
+  } catch (error) {
+    console.error("Error migrating templates:", error);
+  }
+}
+
+// Run migration once on module load
+if (typeof window !== "undefined") {
+  migrateFromLocalStorage();
+}
 
 export const templateStorage = {
   /**
    * Get all saved templates
    */
-  getAll(): GameTemplate[] {
-    if (typeof window === "undefined") return [];
-    
+  async getAll(): Promise<GameTemplate[]> {
     try {
-      const stored = localStorage.getItem(TEMPLATES_KEY);
-      if (!stored) return [];
-      return JSON.parse(stored);
+      return await indexedDBStorage.getAll();
     } catch (error) {
       console.error("Error loading templates:", error);
       return [];
@@ -22,33 +58,35 @@ export const templateStorage = {
   /**
    * Get a specific template by ID
    */
-  getById(id: string): GameTemplate | null {
-    const templates = this.getAll();
-    return templates.find(t => t.id === id) || null;
+  async getById(id: string): Promise<GameTemplate | null> {
+    try {
+      return await indexedDBStorage.getById(id);
+    } catch (error) {
+      console.error("Error getting template:", error);
+      return null;
+    }
   },
 
   /**
    * Save a new template or update existing one
    */
-  save(name: string, categories: Category[], id?: string): GameTemplate {
-    const templates = this.getAll();
+  async save(name: string, categories: Category[], id?: string): Promise<GameTemplate> {
     const now = Date.now();
-    
+
     if (id) {
       // Update existing template
-      const index = templates.findIndex(t => t.id === id);
-      if (index !== -1) {
-        templates[index] = {
-          ...templates[index],
+      const existing = await indexedDBStorage.getById(id);
+      if (existing) {
+        const updated: GameTemplate = {
+          ...existing,
           name,
           categories: JSON.parse(JSON.stringify(categories)), // Deep clone
           lastModified: now,
         };
-        localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
-        return templates[index];
+        return await indexedDBStorage.save(updated);
       }
     }
-    
+
     // Create new template
     const newTemplate: GameTemplate = {
       id: `template_${now}`,
@@ -57,50 +95,67 @@ export const templateStorage = {
       createdAt: now,
       lastModified: now,
     };
-    
-    templates.push(newTemplate);
-    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
-    return newTemplate;
+
+    return await indexedDBStorage.save(newTemplate);
   },
 
   /**
    * Delete a template by ID
    */
-  delete(id: string): boolean {
-    const templates = this.getAll();
-    const filtered = templates.filter(t => t.id !== id);
-    
-    if (filtered.length === templates.length) {
-      return false; // Template not found
+  async delete(id: string): Promise<boolean> {
+    try {
+      return await indexedDBStorage.delete(id);
+    } catch (error) {
+      console.error("Error deleting template:", error);
+      return false;
     }
-    
-    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(filtered));
-    return true;
   },
 
   /**
    * Rename a template
    */
-  rename(id: string, newName: string): boolean {
-    const templates = this.getAll();
-    const template = templates.find(t => t.id === id);
-    
-    if (!template) return false;
-    
-    template.name = newName;
-    template.lastModified = Date.now();
-    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
-    return true;
+  async rename(id: string, newName: string): Promise<boolean> {
+    try {
+      const template = await indexedDBStorage.getById(id);
+      if (!template) return false;
+
+      template.name = newName;
+      template.lastModified = Date.now();
+      await indexedDBStorage.save(template);
+      return true;
+    } catch (error) {
+      console.error("Error renaming template:", error);
+      return false;
+    }
   },
 
   /**
    * Check if a template name already exists
    */
-  nameExists(name: string, excludeId?: string): boolean {
-    const templates = this.getAll();
-    return templates.some(t => 
-      t.name.toLowerCase() === name.toLowerCase() && t.id !== excludeId
-    );
+  async nameExists(name: string, excludeId?: string): Promise<boolean> {
+    try {
+      const templates = await this.getAll();
+      return templates.some(t =>
+        t.name.toLowerCase() === name.toLowerCase() && t.id !== excludeId
+      );
+    } catch (error) {
+      console.error("Error checking template name:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Get storage usage information
+   */
+  async getStorageInfo(): Promise<{ usedMB: number; quotaMB: number; percentUsed: number } | null> {
+    const estimate = await indexedDBStorage.getStorageEstimate();
+    if (!estimate) return null;
+
+    const usedMB = estimate.usage / (1024 * 1024);
+    const quotaMB = estimate.quota / (1024 * 1024);
+    const percentUsed = (estimate.usage / estimate.quota) * 100;
+
+    return { usedMB, quotaMB, percentUsed };
   },
 };
 

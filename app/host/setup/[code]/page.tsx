@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X, HardDrive } from "lucide-react";
 import { Category, Question, GameTemplate } from "@/types/game";
 import { templateStorage } from "@/lib/template-storage";
 import { CategoryBrowser } from "@/components/category-browser";
@@ -48,14 +48,26 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     questionId: string;
     type: 'question' | 'answer';
   } | null>(null);
+  const [storageInfo, setStorageInfo] = useState<{
+    usedMB: number;
+    quotaMB: number;
+    percentUsed: number;
+  } | null>(null);
 
   useEffect(() => {
     loadGameState();
     loadTemplates();
+    loadStorageInfo();
   }, []);
 
-  const loadTemplates = () => {
-    setTemplates(templateStorage.getAll());
+  const loadStorageInfo = async () => {
+    const info = await templateStorage.getStorageInfo();
+    setStorageInfo(info);
+  };
+
+  const loadTemplates = async () => {
+    const allTemplates = await templateStorage.getAll();
+    setTemplates(allTemplates);
   };
 
   const loadGameState = async () => {
@@ -228,13 +240,14 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     setShowSaveDialog(true);
   };
 
-  const saveAsTemplate = () => {
+  const saveAsTemplate = async () => {
     if (!templateName.trim()) {
       alert("Please enter a template name");
       return;
     }
 
-    if (templateStorage.nameExists(templateName.trim(), editingTemplateId || undefined)) {
+    const nameExists = await templateStorage.nameExists(templateName.trim(), editingTemplateId || undefined);
+    if (nameExists) {
       alert("A template with this name already exists");
       return;
     }
@@ -245,14 +258,15 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       return;
     }
 
-    templateStorage.save(templateName.trim(), categories, editingTemplateId || undefined);
-    loadTemplates();
+    await templateStorage.save(templateName.trim(), categories, editingTemplateId || undefined);
+    await loadTemplates();
+    await loadStorageInfo();
     setShowSaveDialog(false);
     setTemplateName("");
   };
 
-  const loadTemplate = (templateId: string) => {
-    const template = templateStorage.getById(templateId);
+  const loadTemplate = async (templateId: string) => {
+    const template = await templateStorage.getById(templateId);
     if (template) {
       // Deep clone to avoid reference issues
       const templateCategories = JSON.parse(JSON.stringify(template.categories));
@@ -265,10 +279,11 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     }
   };
 
-  const deleteTemplate = (templateId: string) => {
+  const deleteTemplate = async (templateId: string) => {
     if (confirm("Are you sure you want to delete this template?")) {
-      templateStorage.delete(templateId);
-      loadTemplates();
+      await templateStorage.delete(templateId);
+      await loadTemplates();
+      await loadStorageInfo();
     }
   };
 
@@ -437,6 +452,18 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
               {resolvedParams.code}
             </Badge>
+            {storageInfo && (
+              <Badge
+                variant="outline"
+                className={`px-3 py-1 text-sm backdrop-blur-md flex items-center gap-1.5 ${
+                  storageInfo.percentUsed > 80 ? 'border-yellow-500/50 text-yellow-500' :
+                  storageInfo.percentUsed > 95 ? 'border-red-500/50 text-red-500' : ''
+                }`}
+              >
+                <HardDrive className="h-3 w-3" />
+                {storageInfo.usedMB.toFixed(1)} / {storageInfo.quotaMB.toFixed(0)} MB
+              </Badge>
+            )}
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button onClick={() => router.push(`/lobby/${resolvedParams.code}`)} variant="outline" size="sm">
