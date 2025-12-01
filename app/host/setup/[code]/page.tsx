@@ -228,12 +228,24 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       return;
     }
 
-    // Warn if data is very large
+    // Check data size
     const sizeMB = estimateTemplateSize();
-    if (sizeMB > 50) {
+    console.log(`[SaveGame] Uncompressed size: ${sizeMB.toFixed(2)} MB`);
+
+    // Warn if even compressed data might be too large
+    // Compression typically achieves 60-80% reduction for base64 images
+    const estimatedCompressedMB = sizeMB * 0.3; // Conservative estimate
+    if (estimatedCompressedMB > 4) {
       const proceed = confirm(
-        `This game has a lot of data (${sizeMB.toFixed(1)} MB). ` +
-        `Saving may take a moment. Continue?`
+        `This game has ${sizeMB.toFixed(1)} MB of data. ` +
+        `Even compressed (~${estimatedCompressedMB.toFixed(1)} MB), it may be too large to save. ` +
+        `Consider removing some images. Continue anyway?`
+      );
+      if (!proceed) return;
+    } else if (sizeMB > 10) {
+      const proceed = confirm(
+        `This game has ${sizeMB.toFixed(1)} MB of data. ` +
+        `It will be compressed before saving. Continue?`
       );
       if (!proceed) return;
     }
@@ -245,18 +257,25 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
       gameState.categories = categories;
 
-      // Compress data if it's large (>5MB)
+      // Compress data if it's large (>1MB to ensure it works)
       let payload;
-      if (sizeMB > 5) {
+      if (sizeMB > 1) {
+        console.log(`[SaveGame] Compressing data...`);
         const compressed = compressData(gameState);
+        const compressedSizeMB = compressed.length / (1024 * 1024);
+        console.log(`[SaveGame] Compressed: ${sizeMB.toFixed(2)}MB → ${compressedSizeMB.toFixed(2)}MB (${((1 - compressedSizeMB / sizeMB) * 100).toFixed(1)}% reduction)`);
+
         payload = {
           compressed: true,
           data: compressed
         };
-        console.log(`Compressed ${sizeMB.toFixed(1)}MB to ${(compressed.length / (1024 * 1024)).toFixed(1)}MB`);
       } else {
+        console.log(`[SaveGame] Sending uncompressed (size < 1MB)`);
         payload = { gameState };
       }
+
+      const payloadSize = JSON.stringify(payload).length / (1024 * 1024);
+      console.log(`[SaveGame] Final payload size: ${payloadSize.toFixed(2)} MB`);
 
       const saveResponse = await fetch(`/api/lobby/${resolvedParams.code}/state`, {
         method: "POST",
@@ -265,13 +284,16 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       });
 
       if (!saveResponse.ok) {
-        throw new Error(`Server returned ${saveResponse.status}`);
+        const errorText = await saveResponse.text();
+        console.error(`[SaveGame] Server error: ${saveResponse.status}`, errorText);
+        throw new Error(`Server returned ${saveResponse.status}: ${errorText}`);
       }
 
+      console.log(`[SaveGame] Success!`);
       router.push(`/lobby/${resolvedParams.code}`);
     } catch (error) {
-      console.error("Error saving game:", error);
-      alert("Failed to save game. The data might be too large for the server to handle.");
+      console.error("[SaveGame] Error:", error);
+      alert(`Failed to save game. ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsSaving(false);
     }
   };
@@ -581,12 +603,12 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
             <Button onClick={addCategory} variant="secondary" size="sm">
               <Plus className="mr-1 h-3 w-3" />
-              Add Category
+              Add
             </Button>
 
-            <Button onClick={saveGame} size="sm" disabled={isSaving}>
+            <Button onClick={saveGame} size="sm" disabled={isSaving} className="min-w-[80px]">
               <Save className="mr-1 h-3 w-3" />
-              {isSaving ? "Saving..." : "Save"}
+              <span className="whitespace-nowrap">{isSaving ? "Saving..." : "Save"}</span>
             </Button>
           </div>
         </div>
