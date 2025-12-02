@@ -57,8 +57,22 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [currentBoardSize, setCurrentBoardSize] = useState<number>(0);
   const [uncompressedBoardSize, setUncompressedBoardSize] = useState<number>(0);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'default' | 'destructive';
+  }>({
+    open: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    variant: 'default',
+  });
 
   useEffect(() => {
     loadGameState();
@@ -96,6 +110,21 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   const loadStorageInfo = async () => {
     const info = await templateStorage.getStorageInfo();
     setStorageInfo(info);
+  };
+
+  // Helper to show confirmation dialog
+  const showConfirm = (title: string, message: string, onConfirm: () => void, variant: 'default' | 'destructive' = 'default') => {
+    setConfirmDialog({
+      open: true,
+      title,
+      message,
+      onConfirm,
+      variant,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog(prev => ({ ...prev, open: false }));
   };
 
   // Estimate size of current categories in MB
@@ -246,7 +275,8 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       }
     } catch (error) {
       console.error('Error loading default game from dataset:', error);
-      alert('Failed to load default game. Please try again.');
+      setSaveError('Failed to load default game. Please try again.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsGenerating(false);
     }
@@ -254,6 +284,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
   const saveGame = async () => {
     setSaveError(null); // Clear any previous errors
+    setSuccessMessage(null); // Clear any previous success messages
 
     const validation = validateCategories();
     if (!validation.isValid) {
@@ -277,25 +308,42 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     } else if (estimatedCompressedMB > 3.5) {
-      const proceed = confirm(
+      showConfirm(
+        'Large Game Data Warning',
         `This game has ${sizeMB.toFixed(1)} MB of data (estimated ${estimatedCompressedMB.toFixed(1)} MB after compression). ` +
-        `This is approaching Vercel's 4.5 MB limit and may fail to save. Continue anyway?`
+        `This is approaching Vercel's 4.5 MB limit and may fail to save. Continue anyway?`,
+        () => {
+          closeConfirmDialog();
+          performSave();
+        }
       );
-      if (!proceed) return;
+      return;
     } else if (sizeMB > 5) {
-      const proceed = confirm(
+      showConfirm(
+        'Compress Game Data',
         `This game has ${sizeMB.toFixed(1)} MB of data. ` +
-        `It will be compressed to approximately ${estimatedCompressedMB.toFixed(1)} MB before saving. Continue?`
+        `It will be compressed to approximately ${estimatedCompressedMB.toFixed(1)} MB before saving. Continue?`,
+        () => {
+          closeConfirmDialog();
+          performSave();
+        }
       );
-      if (!proceed) return;
+      return;
     }
 
+    performSave();
+  };
+
+  const performSave = async () => {
     setIsSaving(true);
     try {
       const response = await fetch(`/api/lobby/${resolvedParams.code}/state`);
       const gameState = await response.json();
 
       gameState.categories = categories;
+
+      // Recalculate size for compression decision
+      const sizeMB = estimateTemplateSize();
 
       // Compress data if it's large (>1MB to ensure it works)
       let payload;
@@ -360,32 +408,40 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
   const saveAsTemplate = async () => {
     if (!templateName.trim()) {
-      alert("Please enter a template name");
+      setSaveError("Please enter a template name");
       return;
     }
 
     const nameExists = await templateStorage.nameExists(templateName.trim(), editingTemplateId || undefined);
     if (nameExists) {
-      alert("A template with this name already exists");
+      setSaveError("A template with this name already exists");
       return;
     }
 
     const validation = validateCategories();
     if (!validation.isValid) {
-      alert(validation.message);
+      setSaveError(validation.message);
       return;
     }
 
     // Warn if template is very large
     const sizeMB = estimateTemplateSize();
     if (sizeMB > 50) {
-      const proceed = confirm(
-        `This template is quite large (${sizeMB.toFixed(1)} MB). ` +
-        `Saving to IndexedDB may take a moment. Continue?`
+      showConfirm(
+        'Large Template Warning',
+        `This template is quite large (${sizeMB.toFixed(1)} MB). Saving to IndexedDB may take a moment. Continue?`,
+        async () => {
+          closeConfirmDialog();
+          await performTemplateSave(sizeMB);
+        }
       );
-      if (!proceed) return;
+      return;
     }
 
+    await performTemplateSave(sizeMB);
+  };
+
+  const performTemplateSave = async (sizeMB: number) => {
     setIsSaving(true);
     try {
       await templateStorage.save(templateName.trim(), categories, editingTemplateId || undefined);
@@ -396,11 +452,13 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
       // Show success message with size info if large
       if (sizeMB > 10) {
-        alert(`Template saved successfully! (${sizeMB.toFixed(1)} MB stored in IndexedDB)`);
+        setSuccessMessage(`Template saved successfully! (${sizeMB.toFixed(1)} MB stored in IndexedDB)`);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (error) {
       console.error("Error saving template:", error);
-      alert("Failed to save template. The template might be too large or you may be out of storage space.");
+      setSaveError("Failed to save template. The template might be too large or you may be out of storage space.");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSaving(false);
     }
@@ -421,11 +479,17 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   };
 
   const deleteTemplate = async (templateId: string) => {
-    if (confirm("Are you sure you want to delete this template?")) {
-      await templateStorage.delete(templateId);
-      await loadTemplates();
-      await loadStorageInfo();
-    }
+    showConfirm(
+      'Delete Template',
+      'Are you sure you want to delete this template? This action cannot be undone.',
+      async () => {
+        closeConfirmDialog();
+        await templateStorage.delete(templateId);
+        await loadTemplates();
+        await loadStorageInfo();
+      },
+      'destructive'
+    );
   };
 
   const startRenameTemplate = (template: GameTemplate) => {
@@ -446,7 +510,8 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       }
     } catch (error) {
       console.error('Error generating categories from dataset:', error);
-      alert('Failed to generate categories from dataset');
+      setSaveError('Failed to generate categories from dataset');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsGenerating(false);
     }
@@ -587,12 +652,38 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       <div className="max-w-7xl mx-auto">
         {/* Error Alert */}
         {saveError && (
-          <Alert variant="destructive" className="mb-4">
+          <Alert variant="destructive" className="mb-4 relative">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Failed to Save Game</AlertTitle>
-            <AlertDescription className="mt-2">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription className="mt-2 pr-8">
               {saveError}
             </AlertDescription>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-2 right-2 h-6 w-6 p-0"
+              onClick={() => setSaveError(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </Alert>
+        )}
+
+        {/* Success Alert */}
+        {successMessage && (
+          <Alert className="mb-4 border-green-500/50 text-green-500 bg-green-500/10 relative">
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription className="mt-2 pr-8">
+              {successMessage}
+            </AlertDescription>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-2 right-2 h-6 w-6 p-0 text-green-500 hover:text-green-600 hover:bg-green-500/20"
+              onClick={() => setSuccessMessage(null)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </Alert>
         )}
 
@@ -999,6 +1090,31 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
           </div>
           <DialogFooter>
             <Button onClick={() => setShowManageDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmDialog.open} onOpenChange={() => closeConfirmDialog()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmDialog.title}</DialogTitle>
+            <DialogDescription>
+              {confirmDialog.message}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeConfirmDialog}>
+              Cancel
+            </Button>
+            <Button
+              variant={confirmDialog.variant === 'destructive' ? 'destructive' : 'default'}
+              onClick={() => {
+                confirmDialog.onConfirm();
+              }}
+            >
+              Confirm
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
