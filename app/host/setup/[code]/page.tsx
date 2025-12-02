@@ -578,13 +578,63 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   };
 
   // Load image from URL and compress it
-  const loadImageFromUrl = async (url: string, imageKey: string): Promise<string> => {
+  const loadImageFromUrl = async (url: string, imageKey: string): Promise<string | null> => {
     // Add to loading set
     setLoadingImages(prev => new Set(prev).add(imageKey));
 
     try {
+      // First, try to load it as an image using Image element (handles CORS better)
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      const imageLoaded = await new Promise<boolean>((resolve) => {
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url;
+      });
+
+      if (imageLoaded) {
+        // Convert image to canvas and then to blob
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          throw new Error('Could not get canvas context');
+        }
+
+        ctx.drawImage(img, 0, 0);
+
+        // Convert canvas to blob
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((b) => {
+            if (b) resolve(b);
+            else reject(new Error('Could not convert to blob'));
+          }, 'image/jpeg', 0.95);
+        });
+
+        const compressed = await compressImage(blob);
+
+        // Remove from loading set
+        setLoadingImages(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(imageKey);
+          return newSet;
+        });
+
+        return compressed;
+      }
+
+      // If image element failed, try fetch approach
       const response = await fetch(url);
       const blob = await response.blob();
+
+      // Check if it's actually an image
+      if (!blob.type.startsWith('image/')) {
+        throw new Error('URL does not point to an image');
+      }
+
       const compressed = await compressImage(blob);
 
       // Remove from loading set
@@ -605,46 +655,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
         return newSet;
       });
 
-      // Return the URL as fallback
-      return url;
+      // Return null to indicate failure
+      return null;
     }
-  };
-
-  // Check if a string is a valid image URL
-  const isImageUrl = (text: string): boolean => {
-    // Must start with http:// or https://
-    if (!text.match(/^https?:\/\//i)) return false;
-
-    // Check for direct image file extensions
-    const imageExtPattern = /\.(jpg|jpeg|png|gif|webp|bmp|svg|apng|avif|jfif)(\?.*)?$/i;
-    if (imageExtPattern.test(text)) return true;
-
-    // Check for common image hosting services
-    const imageHosts = [
-      'imgur.com',
-      'i.imgur.com',
-      'giphy.com',
-      'media.giphy.com',
-      'tenor.com',
-      'media.tenor.com',
-      'i.redd.it',
-      'preview.redd.it',
-      'pbs.twimg.com',
-      'media.discordapp.net',
-      'cdn.discordapp.com',
-      'i.postimg.cc',
-      'postimg.cc',
-      'googleusercontent.com'
-    ];
-
-    if (imageHosts.some(host => text.includes(host))) return true;
-
-    // Check for common CDN patterns
-    if (text.match(/\/media\//i) || text.match(/\/cdn\//i) || text.match(/\/images?\//i)) {
-      return true;
-    }
-
-    return false;
   };
 
   // Handle text change with auto image and video detection
@@ -662,14 +675,16 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
           updateQuestion(categoryId, questionId, videoField, trimmedLine);
           break; // Use first valid URL found
         }
-        // Check for image URL
-        else if (isImageUrl(trimmedLine)) {
+        // Try to load as image - attempt for any URL
+        else if (trimmedLine.match(/^https?:\/\//i)) {
           const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
           const imageKey = `${categoryId}-${questionId}-${field}`;
           // Load and compress the image from URL
           const compressedDataUrl = await loadImageFromUrl(trimmedLine, imageKey);
-          updateQuestion(categoryId, questionId, imageField, compressedDataUrl);
-          break; // Use first valid URL found
+          if (compressedDataUrl) {
+            updateQuestion(categoryId, questionId, imageField, compressedDataUrl);
+            break; // Use first valid URL found
+          }
         }
       }
     }
