@@ -19,6 +19,7 @@ import { GifPicker } from "@/components/gif-picker";
 import { YouTubePlayer, isYouTubeUrl } from "@/components/youtube-player";
 import { compressData } from "@/lib/compression";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import imageCompression from 'browser-image-compression';
 
 export default function HostSetup({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -60,6 +61,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [currentBoardSize, setCurrentBoardSize] = useState<number>(0);
   const [uncompressedBoardSize, setUncompressedBoardSize] = useState<number>(0);
+  const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -540,15 +542,83 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     updateQuestion(categoryId, questionId, field, '');
   };
 
+  // Compress an image file or blob
+  const compressImage = async (file: File | Blob): Promise<string> => {
+    try {
+      const options = {
+        maxSizeMB: 0.5, // Max 500KB per image
+        maxWidthOrHeight: 1920, // Max dimension
+        useWebWorker: true,
+        fileType: 'image/jpeg', // Convert to JPEG for better compression
+      };
+
+      const compressedFile = await imageCompression(file as File, options);
+
+      // Convert to data URL
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          resolve(event.target?.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(compressedFile);
+      });
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      // Fallback to uncompressed if compression fails
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          resolve(event.target?.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  // Load image from URL and compress it
+  const loadImageFromUrl = async (url: string, imageKey: string): Promise<string> => {
+    // Add to loading set
+    setLoadingImages(prev => new Set(prev).add(imageKey));
+
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const compressed = await compressImage(blob);
+
+      // Remove from loading set
+      setLoadingImages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(imageKey);
+        return newSet;
+      });
+
+      return compressed;
+    } catch (error) {
+      console.error('Error loading image from URL:', error);
+
+      // Remove from loading set
+      setLoadingImages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(imageKey);
+        return newSet;
+      });
+
+      // Return the URL as fallback
+      return url;
+    }
+  };
+
   // Check if a string is a valid image URL
   const isImageUrl = (text: string): boolean => {
     // Must start with http:// or https://
     if (!text.match(/^https?:\/\//i)) return false;
-    
+
     // Check for direct image file extensions
     const imageExtPattern = /\.(jpg|jpeg|png|gif|webp|bmp|svg|apng|avif|jfif)(\?.*)?$/i;
     if (imageExtPattern.test(text)) return true;
-    
+
     // Check for common image hosting services
     const imageHosts = [
       'imgur.com',
@@ -563,21 +633,22 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       'media.discordapp.net',
       'cdn.discordapp.com',
       'i.postimg.cc',
-      'postimg.cc'
+      'postimg.cc',
+      'googleusercontent.com'
     ];
-    
+
     if (imageHosts.some(host => text.includes(host))) return true;
-    
+
     // Check for common CDN patterns
     if (text.match(/\/media\//i) || text.match(/\/cdn\//i) || text.match(/\/images?\//i)) {
       return true;
     }
-    
+
     return false;
   };
 
   // Handle text change with auto image and video detection
-  const handleTextChange = (categoryId: string, questionId: string, field: 'question' | 'answer', value: string) => {
+  const handleTextChange = async (categoryId: string, questionId: string, field: 'question' | 'answer', value: string) => {
     updateQuestion(categoryId, questionId, field, value);
 
     // Auto-detect URLs - check each line
@@ -594,7 +665,10 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
         // Check for image URL
         else if (isImageUrl(trimmedLine)) {
           const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
-          updateQuestion(categoryId, questionId, imageField, trimmedLine);
+          const imageKey = `${categoryId}-${questionId}-${field}`;
+          // Load and compress the image from URL
+          const compressedDataUrl = await loadImageFromUrl(trimmedLine, imageKey);
+          updateQuestion(categoryId, questionId, imageField, compressedDataUrl);
           break; // Use first valid URL found
         }
       }
@@ -603,9 +677,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
 
   // Handle paste event for clipboard images
   const handlePaste = async (
-    e: React.ClipboardEvent, 
-    categoryId: string, 
-    questionId: string, 
+    e: React.ClipboardEvent,
+    categoryId: string,
+    questionId: string,
     field: 'question' | 'answer'
   ) => {
     const items = e.clipboardData?.items;
@@ -614,21 +688,17 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     // Check for image in clipboard
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      
+
       // Check if it's an image
       if (item.type.startsWith('image/')) {
         e.preventDefault();
-        
+
         const file = item.getAsFile();
         if (file) {
-          // Convert to data URL
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const dataUrl = event.target?.result as string;
-            const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
-            updateQuestion(categoryId, questionId, imageField, dataUrl);
-          };
-          reader.readAsDataURL(file);
+          // Compress and convert to data URL
+          const compressedDataUrl = await compressImage(file);
+          const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
+          updateQuestion(categoryId, questionId, imageField, compressedDataUrl);
         }
         return;
       }
@@ -820,9 +890,15 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                           value={question.question}
                           onChange={(e) => handleTextChange(category.id, question.id, "question", e.target.value)}
                           onPaste={(e) => handlePaste(e, category.id, question.id, "question")}
-                          placeholder="Enter question, paste image/YouTube URL, or paste image from clipboard..."
+                          placeholder="Enter text, paste image URL, YouTube URL, or paste image from clipboard..."
                           className="min-h-[80px]"
                         />
+                        {loadingImages.has(`${category.id}-${question.id}-question`) && (
+                          <div className="mt-2 text-sm text-blue-500 flex items-center gap-2">
+                            <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                            Loading and compressing image...
+                          </div>
+                        )}
                         {question.questionImageUrl && (
                           <div className="mt-2 relative border rounded overflow-hidden">
                             <img
@@ -880,9 +956,15 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                           value={question.answer}
                           onChange={(e) => handleTextChange(category.id, question.id, "answer", e.target.value)}
                           onPaste={(e) => handlePaste(e, category.id, question.id, "answer")}
-                          placeholder="Enter answer, paste image/YouTube URL, or paste image from clipboard..."
+                          placeholder="Enter text, paste image URL (auto-compressed), YouTube URL, or paste image from clipboard..."
                           className="min-h-[80px]"
                         />
+                        {loadingImages.has(`${category.id}-${question.id}-answer`) && (
+                          <div className="mt-2 text-sm text-blue-500 flex items-center gap-2">
+                            <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                            Loading and compressing image...
+                          </div>
+                        )}
                         {question.answerImageUrl && (
                           <div className="mt-2 relative border rounded overflow-hidden">
                             <img
