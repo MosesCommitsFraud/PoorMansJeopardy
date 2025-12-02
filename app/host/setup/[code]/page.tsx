@@ -65,28 +65,29 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     loadStorageInfo();
   }, []);
 
-  // Calculate current board size (compressed) whenever categories change
+  // Estimate current board size (compressed) whenever categories change
   useEffect(() => {
-    const calculateBoardSize = () => {
+    const estimateBoardSize = () => {
       try {
         const jsonString = JSON.stringify({ categories });
         const uncompressedSize = new Blob([jsonString]).size / (1024 * 1024);
 
-        // If data is small, don't compress
+        // If data is small, no compression will be used
         if (uncompressedSize < 1) {
           setCurrentBoardSize(uncompressedSize);
         } else {
-          // Calculate compressed size
-          const compressed = compressData({ categories });
-          const compressedSize = compressed.length / (1024 * 1024);
-          setCurrentBoardSize(compressedSize);
+          // Estimate compressed size without actually compressing (to avoid lag)
+          // Compression typically achieves 60-80% reduction for base64 images
+          // Use 30% of original size as conservative estimate (70% reduction)
+          const estimatedCompressedSize = uncompressedSize * 0.3;
+          setCurrentBoardSize(estimatedCompressedSize);
         }
       } catch {
         setCurrentBoardSize(0);
       }
     };
 
-    calculateBoardSize();
+    estimateBoardSize();
   }, [categories]);
 
   const loadStorageInfo = async () => {
@@ -593,6 +594,18 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             </div>
             <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
               {resolvedParams.code}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={`px-3 py-1.5 text-sm backdrop-blur-md flex items-center gap-2 ${
+                currentBoardSize > 4.5 ? 'border-red-500/50 bg-red-500/10 text-red-500' :
+                currentBoardSize > 3.5 ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500' :
+                'border-blue-500/50 bg-blue-500/10 text-blue-500'
+              }`}
+            >
+              <HardDrive className="h-4 w-4" />
+              <span>{currentBoardSize.toFixed(2)} MB</span>
+              {currentBoardSize > 4.5 && <AlertTriangle className="h-4 w-4" />}
             </Badge>
           </div>
 
