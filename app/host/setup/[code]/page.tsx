@@ -58,6 +58,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [currentBoardSize, setCurrentBoardSize] = useState<number>(0);
+  const [uncompressedBoardSize, setUncompressedBoardSize] = useState<number>(0);
 
   useEffect(() => {
     loadGameState();
@@ -71,19 +72,21 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       try {
         const jsonString = JSON.stringify({ categories });
         const uncompressedSize = new Blob([jsonString]).size / (1024 * 1024);
+        setUncompressedBoardSize(uncompressedSize);
 
         // If data is small, no compression will be used
         if (uncompressedSize < 1) {
           setCurrentBoardSize(uncompressedSize);
         } else {
           // Estimate compressed size without actually compressing (to avoid lag)
-          // Compression typically achieves 60-80% reduction for base64 images
-          // Use 30% of original size as conservative estimate (70% reduction)
-          const estimatedCompressedSize = uncompressedSize * 0.3;
+          // Base64 images don't compress well - LZ-String typically achieves only 40-50% reduction
+          // Use 50% of original size as realistic estimate for image-heavy content
+          const estimatedCompressedSize = uncompressedSize * 0.5;
           setCurrentBoardSize(estimatedCompressedSize);
         }
       } catch {
         setCurrentBoardSize(0);
+        setUncompressedBoardSize(0);
       }
     };
 
@@ -264,19 +267,25 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     console.log(`[SaveGame] Uncompressed size: ${sizeMB.toFixed(2)} MB`);
 
     // Warn if even compressed data might be too large
-    // Compression typically achieves 60-80% reduction for base64 images
-    const estimatedCompressedMB = sizeMB * 0.3; // Conservative estimate
-    if (estimatedCompressedMB > 4) {
+    // Base64 images don't compress well - LZ-String typically achieves only 40-50% reduction
+    const estimatedCompressedMB = sizeMB * 0.5; // Realistic estimate for image-heavy content
+    if (estimatedCompressedMB > 4.5) {
+      setSaveError(
+        `This game has ${sizeMB.toFixed(1)} MB of data (estimated ${estimatedCompressedMB.toFixed(1)} MB after compression). ` +
+        `This exceeds Vercel's 4.5 MB limit. Please reduce the number of images or use smaller images.`
+      );
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    } else if (estimatedCompressedMB > 3.5) {
       const proceed = confirm(
-        `This game has ${sizeMB.toFixed(1)} MB of data. ` +
-        `Even compressed (~${estimatedCompressedMB.toFixed(1)} MB), it may be too large to save. ` +
-        `Consider removing some images. Continue anyway?`
+        `This game has ${sizeMB.toFixed(1)} MB of data (estimated ${estimatedCompressedMB.toFixed(1)} MB after compression). ` +
+        `This is approaching Vercel's 4.5 MB limit and may fail to save. Continue anyway?`
       );
       if (!proceed) return;
-    } else if (sizeMB > 10) {
+    } else if (sizeMB > 5) {
       const proceed = confirm(
         `This game has ${sizeMB.toFixed(1)} MB of data. ` +
-        `It will be compressed before saving. Continue?`
+        `It will be compressed to approximately ${estimatedCompressedMB.toFixed(1)} MB before saving. Continue?`
       );
       if (!proceed) return;
     }
@@ -604,7 +613,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
               }`}
             >
               <HardDrive className="h-4 w-4" />
-              <span>{currentBoardSize.toFixed(2)} MB</span>
+              <span className="font-mono">
+                {uncompressedBoardSize.toFixed(2)} MB → {currentBoardSize.toFixed(2)} MB
+              </span>
               {currentBoardSize > 4.5 && <AlertTriangle className="h-4 w-4" />}
             </Badge>
           </div>
@@ -904,7 +915,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
               >
                 <HardDrive className="h-4 w-4" />
                 <span className="font-semibold">Current Board:</span>
-                <span>{currentBoardSize.toFixed(2)} MB (compressed)</span>
+                <span className="font-mono">{uncompressedBoardSize.toFixed(2)} MB → {currentBoardSize.toFixed(2)} MB</span>
               </Badge>
               {currentBoardSize > 4.5 && (
                 <div className="flex items-center gap-1 text-red-500 text-xs">
