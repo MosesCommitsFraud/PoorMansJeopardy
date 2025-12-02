@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X, HardDrive } from "lucide-react";
+import { Plus, Trash2, Save, ArrowLeft, BookTemplate, FolderOpen, Edit3, Database, Film, X, HardDrive, AlertTriangle } from "lucide-react";
 import { Category, Question, GameTemplate } from "@/types/game";
 import { templateStorage } from "@/lib/template-storage";
 import { CategoryBrowser } from "@/components/category-browser";
@@ -18,6 +18,7 @@ import { generateCategoriesFromDataset } from "@/lib/questions-loader";
 import { GifPicker } from "@/components/gif-picker";
 import { YouTubePlayer, isYouTubeUrl } from "@/components/youtube-player";
 import { compressData } from "@/lib/compression";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function HostSetup({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
@@ -55,12 +56,38 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     percentUsed: number;
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [currentBoardSize, setCurrentBoardSize] = useState<number>(0);
 
   useEffect(() => {
     loadGameState();
     loadTemplates();
     loadStorageInfo();
   }, []);
+
+  // Calculate current board size (compressed) whenever categories change
+  useEffect(() => {
+    const calculateBoardSize = () => {
+      try {
+        const jsonString = JSON.stringify({ categories });
+        const uncompressedSize = new Blob([jsonString]).size / (1024 * 1024);
+
+        // If data is small, don't compress
+        if (uncompressedSize < 1) {
+          setCurrentBoardSize(uncompressedSize);
+        } else {
+          // Calculate compressed size
+          const compressed = compressData({ categories });
+          const compressedSize = compressed.length / (1024 * 1024);
+          setCurrentBoardSize(compressedSize);
+        }
+      } catch {
+        setCurrentBoardSize(0);
+      }
+    };
+
+    calculateBoardSize();
+  }, [categories]);
 
   const loadStorageInfo = async () => {
     const info = await templateStorage.getStorageInfo();
@@ -222,9 +249,12 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   };
 
   const saveGame = async () => {
+    setSaveError(null); // Clear any previous errors
+
     const validation = validateCategories();
     if (!validation.isValid) {
-      alert(validation.message);
+      setSaveError(validation.message);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -286,14 +316,28 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       if (!saveResponse.ok) {
         const errorText = await saveResponse.text();
         console.error(`[SaveGame] Server error: ${saveResponse.status}`, errorText);
-        throw new Error(`Server returned ${saveResponse.status}: ${errorText}`);
+
+        // Handle 413 Payload Too Large specifically
+        if (saveResponse.status === 413) {
+          setSaveError(
+            `Game data is too large to save (${payloadSize.toFixed(2)} MB compressed). ` +
+            `Vercel has a 4.5 MB request limit. Please reduce the number of images or use smaller images. ` +
+            `Error: ${errorText}`
+          );
+        } else {
+          setSaveError(`Failed to save game. Server returned ${saveResponse.status}: ${errorText}`);
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setIsSaving(false);
+        return;
       }
 
       console.log(`[SaveGame] Success!`);
       router.push(`/lobby/${resolvedParams.code}`);
     } catch (error) {
       console.error("[SaveGame] Error:", error);
-      alert(`Failed to save game. ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setSaveError(`Failed to save game. ${error instanceof Error ? error.message : 'Unknown error'}`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       setIsSaving(false);
     }
   };
@@ -531,6 +575,17 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
+        {/* Error Alert */}
+        {saveError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Failed to Save Game</AlertTitle>
+            <AlertDescription className="mt-2">
+              {saveError}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex justify-between items-center mb-4 gap-4">
           <div className="flex items-center gap-3">
             <div className="bg-card/60 backdrop-blur-md border border-border px-6 py-3 rounded-lg">
@@ -539,18 +594,6 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             <Badge variant="outline" className="px-3 py-1 text-sm font-mono backdrop-blur-md">
               {resolvedParams.code}
             </Badge>
-            {storageInfo && (
-              <Badge
-                variant="outline"
-                className={`px-3 py-1 text-sm backdrop-blur-md flex items-center gap-1.5 ${
-                  storageInfo.percentUsed > 80 ? 'border-yellow-500/50 text-yellow-500' :
-                  storageInfo.percentUsed > 95 ? 'border-red-500/50 text-red-500' : ''
-                }`}
-              >
-                <HardDrive className="h-3 w-3" />
-                {(storageInfo.usedMB / 1024).toFixed(2)} / {(storageInfo.quotaMB / 1024).toFixed(1)} GB
-              </Badge>
-            )}
           </div>
 
           <div className="flex gap-2 flex-wrap">
@@ -836,6 +879,47 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             <DialogDescription>
               Your saved game templates ({templates.length} total)
             </DialogDescription>
+            {/* Board Size Indicator with Warning */}
+            <div className="mt-3 flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className={`px-3 py-1.5 text-sm flex items-center gap-2 ${
+                  currentBoardSize > 4.5 ? 'border-red-500/50 bg-red-500/10 text-red-500' :
+                  currentBoardSize > 3.5 ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500' :
+                  'border-blue-500/50 bg-blue-500/10 text-blue-500'
+                }`}
+              >
+                <HardDrive className="h-4 w-4" />
+                <span className="font-semibold">Current Board:</span>
+                <span>{currentBoardSize.toFixed(2)} MB (compressed)</span>
+              </Badge>
+              {currentBoardSize > 4.5 && (
+                <div className="flex items-center gap-1 text-red-500 text-xs">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>Exceeds Vercel&apos;s 4.5 MB limit!</span>
+                </div>
+              )}
+              {currentBoardSize > 3.5 && currentBoardSize <= 4.5 && (
+                <div className="flex items-center gap-1 text-yellow-500 text-xs">
+                  <AlertTriangle className="h-3 w-3" />
+                  <span>Approaching limit</span>
+                </div>
+              )}
+            </div>
+            {storageInfo && (
+              <div className="mt-2">
+                <Badge
+                  variant="outline"
+                  className={`px-3 py-1.5 text-xs flex items-center gap-2 w-fit ${
+                    storageInfo.percentUsed > 80 ? 'border-yellow-500/50 text-yellow-500' :
+                    storageInfo.percentUsed > 95 ? 'border-red-500/50 text-red-500' : ''
+                  }`}
+                >
+                  <span>Total IndexedDB Storage:</span>
+                  <span>{(storageInfo.usedMB / 1024).toFixed(2)} / {(storageInfo.quotaMB / 1024).toFixed(1)} GB ({storageInfo.percentUsed.toFixed(1)}%)</span>
+                </Badge>
+              </div>
+            )}
           </DialogHeader>
           <div className="space-y-3 max-h-[400px] overflow-y-auto py-4">
             {templates.length === 0 ? (
