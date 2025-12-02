@@ -86,18 +86,51 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   useEffect(() => {
     const estimateBoardSize = () => {
       try {
-        const jsonString = JSON.stringify({ categories });
-        const uncompressedSize = new Blob([jsonString]).size / (1024 * 1024);
-        setUncompressedBoardSize(uncompressedSize);
+        // Calculate size of image data vs text data separately
+        let imageDataSize = 0;
+        let textDataSize = 0;
+
+        categories.forEach(category => {
+          // Category name is text
+          textDataSize += new Blob([JSON.stringify(category.name)]).size;
+
+          category.questions.forEach(question => {
+            // Question and answer text
+            textDataSize += new Blob([JSON.stringify(question.question)]).size;
+            textDataSize += new Blob([JSON.stringify(question.answer)]).size;
+
+            // Image URLs (base64 or regular URLs)
+            if (question.questionImageUrl) {
+              imageDataSize += new Blob([question.questionImageUrl]).size;
+            }
+            if (question.answerImageUrl) {
+              imageDataSize += new Blob([question.answerImageUrl]).size;
+            }
+
+            // Video URLs (don't compress well but are small)
+            if (question.questionVideoUrl) {
+              textDataSize += new Blob([question.questionVideoUrl]).size;
+            }
+            if (question.answerVideoUrl) {
+              textDataSize += new Blob([question.answerVideoUrl]).size;
+            }
+          });
+        });
+
+        const totalUncompressedSize = (imageDataSize + textDataSize) / (1024 * 1024);
+        setUncompressedBoardSize(totalUncompressedSize);
 
         // If data is small, no compression will be used
-        if (uncompressedSize < 1) {
-          setCurrentBoardSize(uncompressedSize);
+        if (totalUncompressedSize < 1) {
+          setCurrentBoardSize(totalUncompressedSize);
         } else {
-          // Estimate compressed size without actually compressing (to avoid lag)
-          // Base64 images don't compress well - LZ-String typically achieves only 40-50% reduction
-          // Use 50% of original size as realistic estimate for image-heavy content
-          const estimatedCompressedSize = uncompressedSize * 0.5;
+          // Apply different compression ratios
+          // Base64-encoded images: LZ-String achieves only ~15-20% reduction (use 85%)
+          // Text/JSON structure: LZ-String achieves ~60-70% reduction (use 35%)
+          const compressedImageSize = (imageDataSize / (1024 * 1024)) * 0.85;
+          const compressedTextSize = (textDataSize / (1024 * 1024)) * 0.35;
+          const estimatedCompressedSize = compressedImageSize + compressedTextSize;
+
           setCurrentBoardSize(estimatedCompressedSize);
         }
       } catch {
@@ -295,13 +328,29 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       return;
     }
 
-    // Check data size
-    const sizeMB = estimateTemplateSize();
-    console.log(`[SaveGame] Uncompressed size: ${sizeMB.toFixed(2)} MB`);
+    // Check data size with accurate estimation
+    let imageDataSize = 0;
+    let textDataSize = 0;
+
+    categories.forEach(category => {
+      textDataSize += new Blob([JSON.stringify(category.name)]).size;
+      category.questions.forEach(question => {
+        textDataSize += new Blob([JSON.stringify(question.question)]).size;
+        textDataSize += new Blob([JSON.stringify(question.answer)]).size;
+        if (question.questionImageUrl) imageDataSize += new Blob([question.questionImageUrl]).size;
+        if (question.answerImageUrl) imageDataSize += new Blob([question.answerImageUrl]).size;
+        if (question.questionVideoUrl) textDataSize += new Blob([question.questionVideoUrl]).size;
+        if (question.answerVideoUrl) textDataSize += new Blob([question.answerVideoUrl]).size;
+      });
+    });
+
+    const sizeMB = (imageDataSize + textDataSize) / (1024 * 1024);
+    console.log(`[SaveGame] Uncompressed size: ${sizeMB.toFixed(2)} MB (Images: ${(imageDataSize / (1024 * 1024)).toFixed(2)} MB, Text: ${(textDataSize / (1024 * 1024)).toFixed(2)} MB)`);
 
     // Warn if even compressed data might be too large
-    // Base64 images don't compress well - LZ-String typically achieves only 40-50% reduction
-    const estimatedCompressedMB = sizeMB * 0.5; // Realistic estimate for image-heavy content
+    // Base64 images: ~85% of original (15% reduction)
+    // Text/JSON: ~35% of original (65% reduction)
+    const estimatedCompressedMB = ((imageDataSize / (1024 * 1024)) * 0.85) + ((textDataSize / (1024 * 1024)) * 0.35);
     if (estimatedCompressedMB > 4.5) {
       setSaveError(
         `This game has ${sizeMB.toFixed(1)} MB of data (estimated ${estimatedCompressedMB.toFixed(1)} MB after compression). ` +
@@ -583,14 +632,16 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     setLoadingImages(prev => new Set(prev).add(imageKey));
 
     try {
-      // First, try to load it as an image using Image element (handles CORS better)
+      // Use server-side proxy to bypass CORS restrictions
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
+
+      // Try to load the proxied image using Image element
       const img = new Image();
-      img.crossOrigin = 'anonymous';
 
       const imageLoaded = await new Promise<boolean>((resolve) => {
         img.onload = () => resolve(true);
         img.onerror = () => resolve(false);
-        img.src = url;
+        img.src = proxyUrl;
       });
 
       if (imageLoaded) {
@@ -626,8 +677,13 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
         return compressed;
       }
 
-      // If image element failed, try fetch approach
-      const response = await fetch(url);
+      // If image element failed, try fetch approach on proxy
+      const response = await fetch(proxyUrl);
+
+      if (!response.ok) {
+        throw new Error(`Proxy returned ${response.status}`);
+      }
+
       const blob = await response.blob();
 
       // Check if it's actually an image
