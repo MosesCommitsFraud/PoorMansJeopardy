@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
 @theme {
-  /* Frosted glass monochrome theme */
   --color-background: oklch(95% 0 0 / 0.3);
   --color-foreground: oklch(15% 0 0);
   --color-card: oklch(98% 0 0 / 0.6);
