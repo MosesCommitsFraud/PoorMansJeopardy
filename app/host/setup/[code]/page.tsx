@@ -1014,7 +1014,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                           value={question.answer}
                           onChange={(e) => handleTextChange(category.id, question.id, "answer", e.target.value)}
                           onPaste={(e) => handlePaste(e, category.id, question.id, "answer")}
-                          placeholder="Enter text, paste image URL (auto-compressed), YouTube URL, or paste image from clipboard..."
+                          placeholder="Enter text, paste image URL, YouTube URL, or paste image from clipboard..."
                           className="min-h-[80px]"
                         />
                         {loadingImages.has(`${category.id}-${question.id}-answer`) && (
