@@ -25,6 +25,15 @@ import { Wifi, WifiOff } from "lucide-react";
 import { YouTubePlayer } from "@/components/youtube-player";
 import { GameSettingsPanel } from "@/components/GameSettingsPanel";
 
+// Helper to get the proper src for an image (use proxy for URLs, direct for base64)
+const getImageSrc = (imageUrl: string): string => {
+  if (imageUrl.startsWith('data:image/')) {
+    return imageUrl; // Base64, use directly
+  }
+  // URL-based image, use proxy
+  return `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+};
+
 export default function PlayerView({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
@@ -706,7 +715,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                 {gameState?.currentQuestion?.questionImageUrl && (
                   <div className={`mt-4 flex justify-center ${answerVisible ? 'max-h-32' : 'max-h-56'}`}>
                     <img
-                      src={gameState.currentQuestion.questionImageUrl}
+                      src={getImageSrc(gameState.currentQuestion.questionImageUrl)}
                       alt="Question"
                       className={`rounded-lg object-contain ${
                         answerVisible
@@ -750,7 +759,7 @@ export default function PlayerView({ params }: { params: Promise<{ code: string 
                   {gameState?.currentQuestion?.answerImageUrl && (
                     <div className="mt-4 flex justify-center max-h-40">
                       <img
-                        src={gameState.currentQuestion.answerImageUrl}
+                        src={getImageSrc(gameState.currentQuestion.answerImageUrl)}
                         alt="Answer"
                         className="max-h-40 max-w-full object-contain rounded-lg"
                       />

@@ -86,8 +86,8 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
   useEffect(() => {
     const estimateBoardSize = () => {
       try {
-        // Calculate size of image data vs text data separately
-        let imageDataSize = 0;
+        // Calculate size: base64 images vs regular text/URLs
+        let base64ImageDataSize = 0;
         let textDataSize = 0;
 
         categories.forEach(category => {
@@ -99,15 +99,25 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
             textDataSize += new Blob([JSON.stringify(question.question)]).size;
             textDataSize += new Blob([JSON.stringify(question.answer)]).size;
 
-            // Image URLs (base64 or regular URLs)
+            // Image URLs: base64 (heavy) vs regular URLs (light like videos)
             if (question.questionImageUrl) {
-              imageDataSize += new Blob([question.questionImageUrl]).size;
+              const size = new Blob([question.questionImageUrl]).size;
+              if (question.questionImageUrl.startsWith('data:image/')) {
+                base64ImageDataSize += size; // Pasted images (base64)
+              } else {
+                textDataSize += size; // URL-based images (like videos)
+              }
             }
             if (question.answerImageUrl) {
-              imageDataSize += new Blob([question.answerImageUrl]).size;
+              const size = new Blob([question.answerImageUrl]).size;
+              if (question.answerImageUrl.startsWith('data:image/')) {
+                base64ImageDataSize += size; // Pasted images (base64)
+              } else {
+                textDataSize += size; // URL-based images (like videos)
+              }
             }
 
-            // Video URLs (don't compress well but are small)
+            // Video URLs (small URLs)
             if (question.questionVideoUrl) {
               textDataSize += new Blob([question.questionVideoUrl]).size;
             }
@@ -117,7 +127,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
           });
         });
 
-        const totalUncompressedSize = (imageDataSize + textDataSize) / (1024 * 1024);
+        const totalUncompressedSize = (base64ImageDataSize + textDataSize) / (1024 * 1024);
         setUncompressedBoardSize(totalUncompressedSize);
 
         // If data is small, no compression will be used
@@ -125,11 +135,11 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
           setCurrentBoardSize(totalUncompressedSize);
         } else {
           // Apply different compression ratios
-          // Base64-encoded images: LZ-String achieves only ~15-20% reduction (use 85%)
-          // Text/JSON structure: LZ-String achieves ~60-70% reduction (use 35%)
-          const compressedImageSize = (imageDataSize / (1024 * 1024)) * 0.85;
+          // Base64-encoded images (pasted): LZ-String achieves only ~15-20% reduction (use 85%)
+          // Text/JSON/URLs: LZ-String achieves ~60-70% reduction (use 35%)
+          const compressedBase64ImageSize = (base64ImageDataSize / (1024 * 1024)) * 0.85;
           const compressedTextSize = (textDataSize / (1024 * 1024)) * 0.35;
-          const estimatedCompressedSize = compressedImageSize + compressedTextSize;
+          const estimatedCompressedSize = compressedBase64ImageSize + compressedTextSize;
 
           setCurrentBoardSize(estimatedCompressedSize);
         }
@@ -329,7 +339,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     }
 
     // Check data size with accurate estimation
-    let imageDataSize = 0;
+    let base64ImageDataSize = 0;
     let textDataSize = 0;
 
     categories.forEach(category => {
@@ -337,20 +347,37 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
       category.questions.forEach(question => {
         textDataSize += new Blob([JSON.stringify(question.question)]).size;
         textDataSize += new Blob([JSON.stringify(question.answer)]).size;
-        if (question.questionImageUrl) imageDataSize += new Blob([question.questionImageUrl]).size;
-        if (question.answerImageUrl) imageDataSize += new Blob([question.answerImageUrl]).size;
+
+        // Separate base64 images (pasted) from URL-based images
+        if (question.questionImageUrl) {
+          const size = new Blob([question.questionImageUrl]).size;
+          if (question.questionImageUrl.startsWith('data:image/')) {
+            base64ImageDataSize += size;
+          } else {
+            textDataSize += size; // URL-based images count as text
+          }
+        }
+        if (question.answerImageUrl) {
+          const size = new Blob([question.answerImageUrl]).size;
+          if (question.answerImageUrl.startsWith('data:image/')) {
+            base64ImageDataSize += size;
+          } else {
+            textDataSize += size; // URL-based images count as text
+          }
+        }
+
         if (question.questionVideoUrl) textDataSize += new Blob([question.questionVideoUrl]).size;
         if (question.answerVideoUrl) textDataSize += new Blob([question.answerVideoUrl]).size;
       });
     });
 
-    const sizeMB = (imageDataSize + textDataSize) / (1024 * 1024);
-    console.log(`[SaveGame] Uncompressed size: ${sizeMB.toFixed(2)} MB (Images: ${(imageDataSize / (1024 * 1024)).toFixed(2)} MB, Text: ${(textDataSize / (1024 * 1024)).toFixed(2)} MB)`);
+    const sizeMB = (base64ImageDataSize + textDataSize) / (1024 * 1024);
+    console.log(`[SaveGame] Uncompressed size: ${sizeMB.toFixed(2)} MB (Base64 Images: ${(base64ImageDataSize / (1024 * 1024)).toFixed(2)} MB, Text/URLs: ${(textDataSize / (1024 * 1024)).toFixed(2)} MB)`);
 
     // Warn if even compressed data might be too large
-    // Base64 images: ~85% of original (15% reduction)
-    // Text/JSON: ~35% of original (65% reduction)
-    const estimatedCompressedMB = ((imageDataSize / (1024 * 1024)) * 0.85) + ((textDataSize / (1024 * 1024)) * 0.35);
+    // Base64 images (pasted): ~85% of original (15% reduction)
+    // Text/JSON/URLs: ~35% of original (65% reduction)
+    const estimatedCompressedMB = ((base64ImageDataSize / (1024 * 1024)) * 0.85) + ((textDataSize / (1024 * 1024)) * 0.35);
     if (estimatedCompressedMB > 4.5) {
       setSaveError(
         `This game has ${sizeMB.toFixed(1)} MB of data (estimated ${estimatedCompressedMB.toFixed(1)} MB after compression). ` +
@@ -626,16 +653,25 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
     }
   };
 
-  // Load image from URL and compress it
-  const loadImageFromUrl = async (url: string, imageKey: string): Promise<string | null> => {
+  // Helper to get the proper src for an image (use proxy for URLs, direct for base64)
+  const getImageSrc = (imageUrl: string): string => {
+    if (imageUrl.startsWith('data:image/')) {
+      return imageUrl; // Base64, use directly
+    }
+    // URL-based image, use proxy
+    return `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+  };
+
+  // Verify image URL works via proxy (but don't download/compress - just store the URL)
+  const verifyImageUrl = async (url: string, imageKey: string): Promise<boolean> => {
     // Add to loading set
     setLoadingImages(prev => new Set(prev).add(imageKey));
 
     try {
-      // Use server-side proxy to bypass CORS restrictions
+      // Use server-side proxy to verify the URL works
       const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
 
-      // Try to load the proxied image using Image element
+      // Just verify it loads (don't process the image data)
       const img = new Image();
 
       const imageLoaded = await new Promise<boolean>((resolve) => {
@@ -644,55 +680,6 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
         img.src = proxyUrl;
       });
 
-      if (imageLoaded) {
-        // Convert image to canvas and then to blob
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          throw new Error('Could not get canvas context');
-        }
-
-        ctx.drawImage(img, 0, 0);
-
-        // Convert canvas to blob
-        const blob = await new Promise<Blob>((resolve, reject) => {
-          canvas.toBlob((b) => {
-            if (b) resolve(b);
-            else reject(new Error('Could not convert to blob'));
-          }, 'image/jpeg', 0.95);
-        });
-
-        const compressed = await compressImage(blob);
-
-        // Remove from loading set
-        setLoadingImages(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(imageKey);
-          return newSet;
-        });
-
-        return compressed;
-      }
-
-      // If image element failed, try fetch approach on proxy
-      const response = await fetch(proxyUrl);
-
-      if (!response.ok) {
-        throw new Error(`Proxy returned ${response.status}`);
-      }
-
-      const blob = await response.blob();
-
-      // Check if it's actually an image
-      if (!blob.type.startsWith('image/')) {
-        throw new Error('URL does not point to an image');
-      }
-
-      const compressed = await compressImage(blob);
-
       // Remove from loading set
       setLoadingImages(prev => {
         const newSet = new Set(prev);
@@ -700,9 +687,9 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
         return newSet;
       });
 
-      return compressed;
+      return imageLoaded;
     } catch (error) {
-      console.error('Error loading image from URL:', error);
+      console.error('Error verifying image URL:', error);
 
       // Remove from loading set
       setLoadingImages(prev => {
@@ -711,8 +698,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
         return newSet;
       });
 
-      // Return null to indicate failure
-      return null;
+      return false;
     }
   };
 
@@ -731,14 +717,15 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
           updateQuestion(categoryId, questionId, videoField, trimmedLine);
           break; // Use first valid URL found
         }
-        // Try to load as image - attempt for any URL
+        // Try to verify as image URL - just store the URL (like YouTube)
         else if (trimmedLine.match(/^https?:\/\//i)) {
           const imageField = field === 'question' ? 'questionImageUrl' : 'answerImageUrl';
           const imageKey = `${categoryId}-${questionId}-${field}`;
-          // Load and compress the image from URL
-          const compressedDataUrl = await loadImageFromUrl(trimmedLine, imageKey);
-          if (compressedDataUrl) {
-            updateQuestion(categoryId, questionId, imageField, compressedDataUrl);
+          // Verify the image URL works (but don't download/compress)
+          const isValid = await verifyImageUrl(trimmedLine, imageKey);
+          if (isValid) {
+            // Store the original URL (not base64) - just like YouTube videos
+            updateQuestion(categoryId, questionId, imageField, trimmedLine);
             break; // Use first valid URL found
           }
         }
@@ -973,7 +960,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                         {question.questionImageUrl && (
                           <div className="mt-2 relative border rounded overflow-hidden">
                             <img
-                              src={question.questionImageUrl}
+                              src={getImageSrc(question.questionImageUrl)}
                               alt="Question"
                               className="w-full max-h-32 object-contain bg-black/20"
                             />
@@ -1039,7 +1026,7 @@ export default function HostSetup({ params }: { params: Promise<{ code: string }
                         {question.answerImageUrl && (
                           <div className="mt-2 relative border rounded overflow-hidden">
                             <img
-                              src={question.answerImageUrl}
+                              src={getImageSrc(question.answerImageUrl)}
                               alt="Answer"
                               className="w-full max-h-32 object-contain bg-black/20"
                             />

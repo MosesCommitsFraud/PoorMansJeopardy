@@ -27,6 +27,15 @@ import { LobbyControlsDialog } from "@/components/LobbyControls";
 import { YouTubePlayer } from "@/components/youtube-player";
 import { GameSettingsPanel } from "@/components/GameSettingsPanel";
 
+// Helper to get the proper src for an image (use proxy for URLs, direct for base64)
+const getImageSrc = (imageUrl: string): string => {
+  if (imageUrl.startsWith('data:image/')) {
+    return imageUrl; // Base64, use directly
+  }
+  // URL-based image, use proxy
+  return `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+};
+
 export default function HostGame({ params }: { params: Promise<{ code: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
@@ -993,7 +1002,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                 {selectedQuestion?.questionImageUrl && (
                   <div className="mt-3 flex justify-center">
                     <img
-                      src={selectedQuestion.questionImageUrl}
+                      src={getImageSrc(selectedQuestion.questionImageUrl)}
                       alt="Question"
                       className="max-w-full max-h-40 rounded-lg object-contain"
                     />
@@ -1027,7 +1036,7 @@ export default function HostGame({ params }: { params: Promise<{ code: string }>
                   {selectedQuestion?.answerImageUrl && (
                     <div className="mt-3 flex justify-center">
                       <img
-                        src={selectedQuestion.answerImageUrl}
+                        src={getImageSrc(selectedQuestion.answerImageUrl)}
                         alt="Answer"
                         className="max-w-full max-h-40 rounded-lg object-contain"
                       />
